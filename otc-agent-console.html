@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTC Agent Console | AI Agent Orchestration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --agent-bg:     #0B0E14;
+      --agent-panel:  rgba(255,255,255,0.03);
+      --agent-border: rgba(255,255,255,0.08);
+      --agent-text:   #E2E8F0;
+      --agent-accent: #00E5FF;
+      --tool-s4:      #0A6ED1;
+      --tool-dbx:     #FF3621;
+      --tool-sf:      #00A1E0;
+      --tool-sn:      #62A08B;
+      --tool-btp:     #6366F1;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--agent-bg);
+      color: var(--agent-text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── HEADER ── */
+    .agent-header {
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--agent-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,0.25);
+      backdrop-filter: blur(12px);
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 20px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid;
+      transition: all 0.4s ease;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      animation: pulseAnim 1.5s infinite alternate;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulseAnim {
+      0%   { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .exit-link {
+      color: #64748B;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .exit-link:hover { color: #E2E8F0; }
+
+    /* ── LAYOUT ── */
+    .layout-grid {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── LEFT PANEL ── */
+    .panel-left {
+      border-right: 1px solid var(--agent-border);
+      display: flex;
+      flex-direction: column;
+      background: var(--agent-panel);
+    }
+
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      background: rgba(0,0,0,0.18);
+    }
+
+    .panel-header {
+      padding: 13px 22px;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      font-weight: 700;
+      color: #64748B;
+      border-bottom: 1px solid var(--agent-border);
+      background: rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px;
+      scroll-behavior: smooth;
+    }
+
+    /* ── EVENT STREAM ── */
+    .event-card {
+      background: rgba(255,255,255,0.04);
+      border-left: 3px solid #334155;
+      padding: 12px 14px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .event-card.risk {
+      border-left-color: #EF4444;
+      background: rgba(239,68,68,0.05);
+    }
+
+    .event-time {
+      font-size: 10px;
+      color: #475569;
+      margin-bottom: 3px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── AGENT DOCK ── */
+    .agent-dock {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 13px 22px;
+      background: rgba(255,255,255,0.015);
+      border-bottom: 1px solid var(--agent-border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .dock-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      padding: 6px 12px;
+      border-radius: 99px;
+      transition: all 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+      opacity: 0.45;
+      filter: grayscale(100%);
+    }
+
+    .dock-item span {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #CBD5E1;
+    }
+
+    .dock-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7.5px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .dock-icon.s4  { background: var(--tool-s4); }
+    .dock-icon.dbx { background: var(--tool-dbx); }
+    .dock-icon.sf  { background: var(--tool-sf); }
+    .dock-icon.sn  { background: var(--tool-sn); }
+    .dock-icon.btp { background: var(--tool-btp); }
+
+    .dock-connector {
+      height: 2px;
+      width: 24px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .dock-connector::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .dock-connector.flowing::after {
+      opacity: 1;
+      animation: flowRight 0.9s infinite linear;
+    }
+
+    @keyframes flowRight { 0% { left:-100%; } 100% { left:100%; } }
+
+    .dock-item.active-tool {
+      opacity: 1;
+      filter: grayscale(0%);
+      transform: scale(1.07);
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(255,255,255,0.22);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+    }
+
+    @keyframes glowS4  { 0%{box-shadow:0 0 8px var(--tool-s4);}  100%{box-shadow:0 0 22px var(--tool-s4);}  }
+    @keyframes glowDBX { 0%{box-shadow:0 0 8px var(--tool-dbx);} 100%{box-shadow:0 0 22px var(--tool-dbx);} }
+    @keyframes glowSF  { 0%{box-shadow:0 0 8px var(--tool-sf);}  100%{box-shadow:0 0 22px var(--tool-sf);}  }
+    @keyframes glowSN  { 0%{box-shadow:0 0 8px var(--tool-sn);}  100%{box-shadow:0 0 22px var(--tool-sn);}  }
+    @keyframes glowBTP { 0%{box-shadow:0 0 8px var(--tool-btp);} 100%{box-shadow:0 0 22px var(--tool-btp);} }
+
+    .dock-item.glow-s4  .dock-icon { animation: glowS4  1.4s infinite alternate; }
+    .dock-item.glow-dbx .dock-icon { animation: glowDBX 1.4s infinite alternate; }
+    .dock-item.glow-sf  .dock-icon { animation: glowSF  1.4s infinite alternate; }
+    .dock-item.glow-sn  .dock-icon { animation: glowSN  1.4s infinite alternate; }
+    .dock-item.glow-btp .dock-icon { animation: glowBTP 1.4s infinite alternate; }
+
+    @keyframes mentionPop {
+      0%   { transform:scale(1);    filter:brightness(1); }
+      45%  { transform:scale(1.18); filter:brightness(1.6); }
+      100% { transform:scale(1);    filter:brightness(1); }
+    }
+
+    .dock-item.mentioned {
+      animation: mentionPop 0.85s ease-out;
+      opacity: 1;
+      filter: grayscale(0%);
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    /* ── CHAT AREA ── */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 840px;
+      margin: 0 auto;
+      width: 100%;
+      padding-bottom: 160px;
+      position: relative;
+    }
+
+    .chat-container::before {
+      content: '';
+      position: absolute;
+      left: 17px; top: 38px; bottom: 0;
+      width: 2px;
+      background: rgba(255,255,255,0.065);
+      z-index: 0;
+    }
+
+    .chat-message {
+      display: flex;
+      gap: 13px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: fadeUp 0.38s forwards;
+      position: relative;
+      z-index: 1;
+      transition: all 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+      transform-origin: top left;
+    }
+
+    .chat-message.minimized {
+      transform: scale(0.88);
+      opacity: 0.5;
+      filter: grayscale(65%);
+      margin-bottom: -14px;
+    }
+
+    .chat-message.minimized .chat-action-block,
+    .chat-message.minimized .chat-observation-block,
+    .chat-message.minimized .chat-thinking-block { display: none !important; }
+
+    @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-weight: 800;
+      font-size: 9.5px;
+      color: white;
+      transition: all 0.5s ease;
+      position: relative;
+      z-index: 2;
+      letter-spacing: -0.01em;
+    }
+
+    .chat-avatar.sleeping { opacity: 0.45; filter: grayscale(100%); }
+    .chat-avatar.waking   { animation: wakeUp 0.9s forwards; }
+
+    @keyframes wakeUp {
+      0%  { transform:scale(0.88); filter:grayscale(100%); opacity:0.45; }
+      50% { transform:scale(1.12); filter:grayscale(0%);   opacity:1; box-shadow:0 0 14px var(--agent-accent); }
+      100%{ transform:scale(1);    filter:grayscale(0%);   opacity:1; }
+    }
+
+    .chat-avatar.dbx { background: var(--tool-dbx); }
+    .chat-avatar.sap { background: var(--tool-s4); }
+    .chat-avatar.sf  { background: var(--tool-sf); }
+    .chat-avatar.sn  { background: var(--tool-sn); }
+    .chat-avatar.btp { background: var(--tool-btp); }
+
+    .chat-content { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1; }
+
+    .chat-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748B;
+      margin-left: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chat-status {
+      font-size: 9.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid transparent;
+    }
+
+    .chat-bubble {
+      background: rgba(255,255,255,0.038);
+      border: 1px solid rgba(255,255,255,0.07);
+      padding: 13px 15px;
+      border-radius: 0 12px 12px 12px;
+      font-size: 13px;
+      line-height: 1.68;
+      color: #E2E8F0;
+    }
+
+    .chat-thinking-block {
+      margin-bottom: 11px;
+      background: rgba(167,139,250,0.05);
+      border-left: 2px solid #A78BFA;
+      padding: 9px 11px;
+      border-radius: 4px;
+      font-size: 12px;
+      transition: all 0.5s ease;
+      overflow: hidden;
+    }
+
+    .chat-thinking-block.collapse {
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      max-height: 0;
+      opacity: 0;
+      border-width: 0;
+    }
+
+    .chat-thinking-header {
+      color: #A78BFA;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 5px;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .chat-action-block {
+      background: rgba(0,0,0,0.42);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-left: 2px solid var(--agent-accent);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #38BDF8;
+      margin-top: 10px;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .chat-observation-block {
+      background: rgba(74,222,128,0.05);
+      border: 1px solid rgba(74,222,128,0.18);
+      border-left: 2px solid #4ADE80;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: #4ADE80;
+      margin-top: 10px;
+      white-space: pre;
+    }
+
+    .typing {
+      overflow: hidden;
+      white-space: pre-wrap;
+      border-right: 2px solid transparent;
+    }
+
+    .typing.active {
+      border-right-color: var(--agent-accent);
+      animation: blink 0.75s step-end infinite;
+    }
+
+    @keyframes blink { from,to{border-color:transparent;} 50%{border-color:var(--agent-accent);} }
+
+    .mention-text {
+      color: var(--agent-accent);
+      font-weight: 600;
+      background: rgba(0,229,255,0.08);
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,229,255,0.18);
+    }
+
+    /* ── SCENARIO PICKER ── */
+    .scenario-picker {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      margin-top: 36px;
+      flex-wrap: wrap;
+      padding: 0 16px;
+    }
+
+    .scenario-picker__title {
+      width: 100%; text-align: center;
+      font-size: 11px; font-weight: 700; color: #64748B;
+      letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px;
+    }
+
+    .scenario-picker__sub {
+      width: 100%; text-align: center;
+      font-size: 12px; color: #475569; margin-bottom: 14px;
+    }
+
+    .scenario-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px;
+      width: 310px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.28s ease;
+    }
+
+    .scenario-card:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(0,0,0,0.32);
+    }
+
+    .scenario-card__icon { font-size: 24px; margin-bottom: 10px; }
+    .scenario-card__title { font-size: 14px; font-weight: 700; color: #E2E8F0; margin-bottom: 7px; }
+    .scenario-card__desc  { font-size: 11.5px; color: #94A3B8; line-height: 1.55; margin-bottom: 14px; }
+
+    .scenario-card__btn {
+      background: rgba(0,229,255,0.09);
+      border: 1px solid rgba(0,229,255,0.28);
+      color: #00E5FF;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      transition: background 0.2s;
+    }
+
+    .scenario-card__btn:hover { background: rgba(0,229,255,0.18); }
+
+    /* ── RESET BUTTON ── */
+    .reset-btn {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      right: 28px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #94A3B8;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      z-index: 50;
+    }
+
+    .reset-btn:hover { color: #E2E8F0; border-color: rgba(255,255,255,0.25); }
+  </style>
+</head>
+<body>
+
+  <!-- ── HEADER ── -->
+  <header class="agent-header">
+    <div class="header-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--agent-accent)" stroke-width="2.2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      OTC Agent Console
+      <span style="font-weight:400;font-size:13px;color:#475569;">| AI Agent Orchestration</span>
+    </div>
+    <div class="header-actions">
+      <div class="status-badge" id="agentStatus"
+           style="background:rgba(100,116,139,0.1);color:#64748B;border-color:rgba(100,116,139,0.2);">
+        <div class="pulse-dot" id="pulseDot" style="background:#64748B;"></div>
+        <span id="statusText">Select a scenario</span>
+      </div>
+      <a href="otc-agent-story.html" class="exit-link">← Back to Story</a>
+    </div>
+  </header>
+
+  <!-- ── MAIN LAYOUT ── -->
+  <div class="layout-grid">
+
+    <!-- LEFT: Order Event Stream -->
+    <div class="panel-left">
+      <div class="panel-header">Order Event Stream</div>
+      <div class="panel-content" id="eventStream">
+        <div class="event-card">
+          <div class="event-time">06:14:22.301Z</div>
+          <strong>Order Confirmed — SO-82471</strong><br>
+          <span style="color:#64748B;">Apex Industries · $4.2M · Delivery: 18 days</span>
+        </div>
+        <div class="event-card">
+          <div class="event-time">07:02:09.718Z</div>
+          <strong>ATP Check Passed</strong><br>
+          <span style="color:#64748B;">SO-81247 · Harlan Systems · All DCs confirmed</span>
+        </div>
+        <div class="event-card">
+          <div class="event-time">08:31:55.441Z</div>
+          <strong>Order Confirmed — SO-81003</strong><br>
+          <span style="color:#64748B;">Nexon Corp · $2.1M · Delivery: 14 days</span>
+        </div>
+        <div class="event-card">
+          <div class="event-time">09:04:12.119Z</div>
+          <strong>Databricks Risk Scan — Complete</strong><br>
+          <span style="color:#64748B;">1,241 open orders evaluated · 0 anomalies</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Collaboration Space -->
+    <div class="panel-right">
+      <div class="panel-header">Multi-Agent Collaboration Space</div>
+
+      <!-- AGENT DOCK -->
+      <div class="agent-dock">
+        <div class="dock-item" id="dock-dbx">
+          <div class="dock-icon dbx">DBX</div>
+          <span>Databricks</span>
+        </div>
+        <div class="dock-connector" id="conn-dbx"></div>
+
+        <div class="dock-item" id="dock-s4">
+          <div class="dock-icon s4">S/4</div>
+          <span>SAP S/4HANA</span>
+        </div>
+        <div class="dock-connector" id="conn-s4"></div>
+
+        <div class="dock-item" id="dock-sf">
+          <div class="dock-icon sf">SF</div>
+          <span>Salesforce</span>
+        </div>
+        <div class="dock-connector" id="conn-sf"></div>
+
+        <div class="dock-item" id="dock-sn">
+          <div class="dock-icon sn">SN</div>
+          <span>ServiceNow</span>
+        </div>
+        <div class="dock-connector" id="conn-sn"></div>
+
+        <div class="dock-item" id="dock-btp">
+          <div class="dock-icon btp">BTP</div>
+          <span>SAP BTP</span>
+        </div>
+      </div>
+
+      <!-- CHAT / TRACE LOG -->
+      <div class="panel-content" id="traceLog">
+        <div class="chat-container" id="traceContainer">
+
+          <!-- SCENARIO PICKER (shown initially) -->
+          <div id="waitingMsg" class="scenario-picker">
+            <div class="scenario-picker__title">Select a Scenario</div>
+            <div class="scenario-picker__sub">Choose an OTC risk event to simulate</div>
+
+            <div class="scenario-card" onclick="loadScenario('disruption')">
+              <div class="scenario-card__icon">⚠️</div>
+              <div class="scenario-card__title">Supply Disruption</div>
+              <div class="scenario-card__desc">
+                Databricks detects a 9-day component shortfall threatening Apex Industries' $4.2M order at 2:31 AM.
+                Agents orchestrate re-routing, air freight sourcing, proactive customer communication, and a ServiceNow P1 ticket —
+                all within 4 minutes, while Priya is asleep.
+              </div>
+              <button class="scenario-card__btn">Run Scenario →</button>
+            </div>
+
+            <div class="scenario-card" onclick="loadScenario('cascade')">
+              <div class="scenario-card__icon">🌐</div>
+              <div class="scenario-card__title">Carrier Network Cascade</div>
+              <div class="scenario-card__desc">
+                BTP detects a MaerskAP force majeure across APAC lanes. 23 open orders ($8.7M) at risk.
+                Agents triage by SLA exposure, re-route the critical 5, and notify all 23 customers
+                an average of 3.2 days before anyone feels the impact.
+              </div>
+              <button class="scenario-card__btn">Run Scenario →</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESET BUTTON (appears after scenario loads) -->
+  <button class="reset-btn" id="resetBtn" onclick="resetConsole()">↩ Choose another scenario</button>
+
+  <script>
+  // ═══════════════════════════════════════════════════════
+  //  SCENARIO 1 — Supply Disruption (Apex Industries)
+  // ═══════════════════════════════════════════════════════
+  const simDisruption = [
+    {
+      type: 'event',
+      title: 'RISK ALERT: Supply Disruption Detected',
+      content: 'Databricks ML flagged component shortfall at PENANG-01 supplier. Order SO-82471 (Apex Industries · $4.2M) — SKUs ACT-7712, ACT-7713, CTRL-4401 at risk. Committed delivery: 18 days.',
+      delay: 700
+    },
+    {
+      type: 'message_start', agent: 'dbx', name: 'Databricks Risk Agent',
+      content: 'Supply disruption confirmed at PENANG-01. Running cross-reference against all open orders to quantify exposure and identify which commitments are at risk...',
+      delay: 1600
+    },
+    {
+      type: 'action', tool: 'toolDBX',
+      code: 'model = dbx.load("supply_risk_scorer_v3")\nresult = model.correlate(\n  disruption = "PENANG_LOGISTICS_2025-03",\n  open_orders = s4.query("status=OPEN"),\n  signals    = ["supplier_eta", "component_inventory", "committed_dates"]\n)\nreturn result.at_risk_orders',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "at_risk_orders": [{\n    "order_id":    "SO-82471",\n    "customer":    "Apex Industries",\n    "value":       "$4.2M",\n    "committed":   "2025-03-30",\n    "affected_skus": ["ACT-7712", "ACT-7713", "CTRL-4401"],\n    "shortfall_days": 9,\n    "sla_penalty_risk": "$2.1M"\n  }],\n  "confidence": 0.96\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'Order SO-82471 (Apex Industries, $4.2M) will miss its committed delivery by 9 days. SLA penalty exposure: $2.1M. @SAP_S4_Agent run global ATP for the 3 affected SKUs and surface any re-sourcing options across the distribution network.',
+      delay: 900
+    },
+    {
+      type: 'message_start', agent: 'sap', name: 'Joule Agent (S/4HANA)',
+      content: 'Running global ATP check across all distribution centres for ACT-7712, ACT-7713, and CTRL-4401. Cross-referencing transit inventory and alternative supplier lead times...',
+      delay: 1100
+    },
+    {
+      type: 'action', tool: 'toolSAP',
+      code: 'sap.s4hana.mm.run_atp_check({\n  "order":  "SO-82471",\n  "skus":   ["ACT-7712", "ACT-7713", "CTRL-4401"],\n  "scope":  "GLOBAL_NETWORK",\n  "include_transit": true\n})\n\nsap.s4hana.sd.update_delivery_schedule({\n  "order": "SO-82471",\n  "partial_ship": {\n    "items": ["ACT-7712", "ACT-7713"],\n    "dc":   "ROTTERDAM",\n    "date": "2025-04-01"\n  },\n  "remainder": {\n    "items": ["CTRL-4401"],\n    "mode": "AIR_FREIGHT",\n    "po":   "PO-91847",\n    "date": "2025-04-03"\n  },\n  "reason": "AI_SUPPLY_DISRUPTION_MITIGATION"\n})',
+      delay: 1500
+    },
+    {
+      type: 'observation',
+      content: '{\n  "atp_results": {\n    "ACT-7712":  { "rotterdam": 850, "status": "AVAILABLE" },\n    "ACT-7713":  { "rotterdam": 920, "status": "AVAILABLE" },\n    "CTRL-4401": { "air_freight": "FREIGHTAIR-GLOBAL", "status": "SOURCEABLE" }\n  },\n  "delivery_updated": true,\n  "new_schedule": {\n    "partial_1": "2025-04-01 — Rotterdam dispatched",\n    "partial_2": "2025-04-03 — Air freight PO-91847 raised"\n  },\n  "net_delay":       "2 days (vs 9 without intervention)",\n  "cost_premium":    "$42K",\n  "sla_risk_avoided": "$2.1M",\n  "policy_check":    "Within autonomous action limits — no approval required"\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'Rotterdam hub covers ACT-7712 and ACT-7713 in full. CTRL-4401 sourced via expedited air freight. Delivery re-scheduled: partial on April 1, balance April 3. Net delay: 2 days — not 9. Cost premium $42K against $2.1M in SLA risk. Both within autonomous policy limits.\n\n@Salesforce_Agent draft and send a proactive update to Apex — 6 days before the original committed date.',
+      delay: 900
+    },
+    {
+      type: 'message_start', agent: 'sf', name: 'Salesforce Comms Agent',
+      content: 'Pulling Apex Industries contact record. Composing proactive communication for VP of Procurement — transparent, solution-focused tone, with revised ETAs and goodwill credit included.',
+      delay: 1300
+    },
+    {
+      type: 'action', tool: 'toolSF',
+      code: 'sf.crm.get_contact({\n  "account": "Apex Industries",\n  "role":    "VP Procurement"\n})\n\nsf.service.send_proactive_update({\n  "contact":       "j.morrison@apex-industries.com",\n  "template":      "SUPPLY_DISRUPTION_PROACTIVE",\n  "order":         "SO-82471",\n  "original_date": "2025-03-30",\n  "revised_plan":  "Partial 2025-04-01 · Balance 2025-04-03",\n  "goodwill_credit": "$15,000",\n  "tone":          "transparent_solution_focused"\n})',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "contact":   "James Morrison — VP Procurement, Apex Industries",\n  "email_sent": true,\n  "timestamp": "2025-03-12T02:33:41Z",\n  "crm_case":  "CASE-77201 — Proactive Delivery Update",\n  "days_before_original_deadline": 18,\n  "goodwill_credit_applied": "$15,000",\n  "channels": ["Email", "Salesforce Activity Log"]\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'Proactive email sent to James Morrison at Apex — 18 days before the original deadline. Revised plan, disruption context, and $15K goodwill credit all included. CRM case CASE-77201 logged for account history.\n\n@ServiceNow_Agent open a P1 logistics coordination ticket and loop in Regional Ops EMEA.',
+      delay: 900
+    },
+    {
+      type: 'message_start', agent: 'sn', name: 'ServiceNow Agent',
+      content: 'Creating P1 ticket for SO-82471 logistics coordination. Assigning to Regional Ops EMEA and notifying VP Customer Operations.',
+      delay: 1100
+    },
+    {
+      type: 'action', tool: 'toolSN',
+      code: 'sn.incident.create({\n  "priority":         "P1 — Critical",\n  "category":         "Logistics Coordination",\n  "short_description":"Supply Disruption — Apex SO-82471 ($4.2M)",\n  "assignment_group": "Regional Ops — EMEA",\n  "linked_order":     "SO-82471",\n  "linked_po":        "PO-91847",\n  "crm_case":         "CASE-77201",\n  "notify": ["priya.nair@globaltech.com"]\n})',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "ticket":      "INC-55829",\n  "priority":    "P1",\n  "assigned_to": "Regional Ops — EMEA",\n  "sla_target":  "4-hour acknowledgment",\n  "notifications_sent": [\n    "Regional Ops Lead — Delivered",\n    "VP Customer Ops (Priya Nair) — Summary delivered"\n  ],\n  "status": "In Progress"\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'P1 ticket INC-55829 open and assigned to Regional Ops EMEA. Priya Nair received a one-paragraph summary notification. No action required from her.\n\nA 9-day delivery crisis — identified, reasoned through, and fully resolved in under 4 minutes. At 2:33 AM.',
+      delay: 1600
+    }
+  ];
+
+  // ═══════════════════════════════════════════════════════
+  //  SCENARIO 2 — Carrier Network Cascade (APAC)
+  // ═══════════════════════════════════════════════════════
+  const simCascade = [
+    {
+      type: 'event',
+      title: 'ALERT: MaerskAP Force Majeure — APAC Lanes',
+      content: 'BTP Integration Hub: MaerskAP API reporting force majeure — 72-hour delay across all APAC shipping lanes. 23 open orders ($8.7M) on affected routes. Earliest SLA breach: 2 days.',
+      delay: 700
+    },
+    {
+      type: 'message_start', agent: 'btp', name: 'BTP Integration Agent',
+      content: 'MaerskAP carrier API reporting force majeure. Scanning the full open order book for all APAC-routed shipments and enriching with customer tier, SLA terms, and breach timelines...',
+      delay: 1600
+    },
+    {
+      type: 'action', tool: 'toolBTP',
+      code: 'btp.event_mesh.scan_open_orders({\n  "carrier": "MAERSKAP",\n  "routes":  ["APAC_OUTBOUND", "APAC_INBOUND"],\n  "status":  ["CONFIRMED", "IN_TRANSIT", "AWAITING_DISPATCH"],\n  "enrich_with": ["customer_tier", "sla_terms", "value", "breach_date"]\n})',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "affected_orders": 23,\n  "total_value":     "$8.7M",\n  "sla_penalty_exposure": "$3.2M",\n  "breakdown": {\n    "tier_1_customers": { "count": 6, "value": "$5.1M" },\n    "tier_2_customers": { "count": 11, "value": "$2.8M" },\n    "tier_3_customers": { "count": 6, "value": "$0.8M" }\n  },\n  "earliest_sla_breach": "2025-03-14 (2 days)"\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: '23 open orders on APAC Maersk routes — $8.7M at risk, $3.2M in SLA penalties if left unaddressed. First breach in 2 days. @Databricks triage by penalty exposure and customer tier so we know exactly where to act first.',
+      delay: 900
+    },
+    {
+      type: 'message_start', agent: 'dbx', name: 'Databricks Risk Agent',
+      content: 'Running priority scoring across all 23 affected orders — weighting SLA penalty exposure (45%), customer tier (35%), and delivery urgency (20%)...',
+      delay: 1600
+    },
+    {
+      type: 'action', tool: 'toolDBX',
+      code: 'model  = dbx.load("order_triage_scorer_v2")\nmatrix = model.score(\n  orders  = btp.get_affected_orders("MAERSKAP"),\n  weights = {\n    "sla_penalty":   0.45,\n    "customer_tier": 0.35,\n    "urgency":       0.20\n  }\n)\nreturn {\n  "critical_reroute": matrix.top(5),\n  "notify_only":      matrix.rest()\n}',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "critical_reroute": [\n    {"order":"SO-81003","customer":"Nexon Corp",     "value":"$2.1M","breach_in":"2d","penalty":"$420K"},\n    {"order":"SO-81247","customer":"Harlan Systems", "value":"$1.8M","breach_in":"3d","penalty":"$360K"},\n    {"order":"SO-81501","customer":"Apex Industries","value":"$1.4M","breach_in":"3d","penalty":"$280K"},\n    {"order":"SO-81689","customer":"DeltaTech",      "value":"$900K","breach_in":"4d","penalty":"$180K"},\n    {"order":"SO-81712","customer":"Meridian Global", "value":"$700K","breach_in":"4d","penalty":"$140K"}\n  ],\n  "notify_only": "18 orders — no SLA breach within 7 days",\n  "combined_penalty_at_risk": "$1.38M"\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'Top 5 orders carry $1.38M in combined SLA penalties within 4 days. The remaining 18 need proactive advisories only — no breach within 7 days. @SAP_S4_Agent re-route the critical 5 through alternative carriers now.',
+      delay: 900
+    },
+    {
+      type: 'message_start', agent: 'sap', name: 'Joule Agent (S/4HANA)',
+      content: 'Querying transportation management for alternative carrier capacity across the 5 critical orders. Evaluating sea and air freight options against delay tolerance and cost policy...',
+      delay: 1100
+    },
+    {
+      type: 'action', tool: 'toolSAP',
+      code: 'sap.s4hana.tm.find_alt_carriers({\n  "orders": [\n    "SO-81003","SO-81247","SO-81501","SO-81689","SO-81712"\n  ],\n  "constraints": {\n    "max_delay_days": 2,\n    "modes": ["SEA_FREIGHT", "AIR_FREIGHT"]\n  },\n  "auto_book_within_policy": true\n})',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "rerouted": [\n    {"order":"SO-81003","carrier":"COSCO_EXPRESS",  "delay":"+1d","cost_delta":"+$8.2K"},\n    {"order":"SO-81247","carrier":"COSCO_EXPRESS",  "delay":"+1d","cost_delta":"+$6.8K"},\n    {"order":"SO-81501","carrier":"EVERGREEN_LINE", "delay":"+2d","cost_delta":"+$5.1K"},\n    {"order":"SO-81689","carrier":"CARGOLUX_AIR",  "delay":"+0d","cost_delta":"+$22K"},\n    {"order":"SO-81712","carrier":"CARGOLUX_AIR",  "delay":"+0d","cost_delta":"+$18K"}\n  ],\n  "total_cost_premium":   "$60.1K",\n  "sla_penalty_avoided":  "$1.38M",\n  "all_within_policy":    true\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'All 5 critical orders re-routed and booked. $60.1K in incremental freight against $1.38M in SLA penalties avoided. All within autonomous action policy — no approvals needed. @Salesforce_Agent send tiered communications: urgent re-routing updates for the critical 5, proactive advisories for the remaining 18.',
+      delay: 900
+    },
+    {
+      type: 'message_start', agent: 'sf', name: 'Salesforce Comms Agent',
+      content: 'Sending tiered communications to all 23 affected customers. Critical group gets specific re-routing details and revised ETAs. Advisory group gets a proactive disruption notice with monitoring assurance.',
+      delay: 1300
+    },
+    {
+      type: 'action', tool: 'toolSF',
+      code: 'sf.service.send_bulk_comms({\n  "critical_group": {\n    "orders":   ["SO-81003","SO-81247","SO-81501","SO-81689","SO-81712"],\n    "template": "CARRIER_DISRUPTION_REROUTED",\n    "include_revised_eta": true,\n    "tone": "reassuring_with_specifics"\n  },\n  "advisory_group": {\n    "orders":   "remaining_18",\n    "template": "CARRIER_DISRUPTION_ADVISORY",\n    "include_monitoring_assurance": true,\n    "tone": "proactive_and_transparent"\n  }\n})',
+      delay: 1300
+    },
+    {
+      type: 'observation',
+      content: '{\n  "critical_comms":  { "sent": 5,  "contacts_reached": 7,  "channels": ["Email","CRM log"] },\n  "advisory_comms":  { "sent": 18, "contacts_reached": 24, "channels": ["Email"] },\n  "total_notified":  23,\n  "avg_days_before_breach": 3.2,\n  "crm_cases_logged": 23\n}',
+      delay: 1100
+    },
+    {
+      type: 'message_append',
+      content: 'All 23 customers notified — an average of 3.2 days before any of them would have felt the disruption.\n\nTotal outcome: $8.7M protected · $1.38M in SLA penalties avoided · $60K incremental freight cost · 23 customer relationships preserved, proactively.',
+      delay: 1800
+    }
+  ];
+
+  // ═══════════════════════════════════════════════════════
+  //  BACKGROUND EVENT FEEDS
+  // ═══════════════════════════════════════════════════════
+  const bgEventsDisruption = `
+    <div class="event-card">
+      <div class="event-time">02:14:03.112Z</div>
+      <strong>Order Confirmed — SO-82471</strong><br>
+      <span style="color:#475569;">Apex Industries · $4.2M · Delivery: 18 days</span>
+    </div>
+    <div class="event-card">
+      <div class="event-time">02:27:44.809Z</div>
+      <strong>Databricks Supply Risk Scan</strong><br>
+      <span style="color:#475569;">Nightly scan — 1,241 open orders evaluated</span>
+    </div>`;
+
+  const bgEventsCascade = `
+    <div class="event-card">
+      <div class="event-time">05:58:12.334Z</div>
+      <strong>Carrier API Health Check</strong><br>
+      <span style="color:#475569;">MaerskAP — OK · 847ms response</span>
+    </div>
+    <div class="event-card">
+      <div class="event-time">07:12:44.201Z</div>
+      <strong>Order Confirmed — SO-81003</strong><br>
+      <span style="color:#475569;">Nexon Corp · $2.1M · APAC shipping route</span>
+    </div>`;
+
+  // ═══════════════════════════════════════════════════════
+  //  STATE
+  // ═══════════════════════════════════════════════════════
+  let activeScript = null;
+  let currentStep = 0;
+  let currentChatBubble = null;
+  const container = document.getElementById('traceContainer');
+  const traceLog  = document.getElementById('traceLog');
+
+  // ═══════════════════════════════════════════════════════
+  //  HELPERS
+  // ═══════════════════════════════════════════════════════
+  function updateStatus(text, isThinking) {
+    const badge = document.getElementById('agentStatus');
+    const span  = document.getElementById('statusText');
+    const dot   = document.getElementById('pulseDot');
+    span.innerText = text;
+    const [bg, clr, border, dotClr] = isThinking
+      ? ['rgba(167,139,250,0.1)', '#A78BFA', 'rgba(167,139,250,0.3)', '#A78BFA']
+      : ['rgba(0,229,255,0.1)',   '#00E5FF', 'rgba(0,229,255,0.2)',   '#00E5FF'];
+    badge.style.background  = bg;
+    badge.style.color       = clr;
+    badge.style.borderColor = border;
+    dot.style.background    = dotClr;
+    dot.style.boxShadow     = `0 0 8px ${dotClr}`;
+  }
+
+  function setIdleStatus() {
+    const badge = document.getElementById('agentStatus');
+    badge.style.background  = 'rgba(16,185,129,0.1)';
+    badge.style.color       = '#10B981';
+    badge.style.borderColor = 'rgba(16,185,129,0.2)';
+    const dot = document.getElementById('pulseDot');
+    dot.style.background = '#10B981';
+    dot.style.boxShadow  = '0 0 8px #10B981';
+    document.getElementById('statusText').innerText = 'Workflow Complete';
+  }
+
+  function highlightTool(toolId) {
+    document.querySelectorAll('.dock-item').forEach(d =>
+      d.classList.remove('active-tool','glow-s4','glow-dbx','glow-sf','glow-sn','glow-btp','mentioned')
+    );
+    document.querySelectorAll('.dock-connector').forEach(c => c.classList.remove('flowing'));
+    if (!toolId) return;
+    const toolMap = {
+      toolDBX: { id:'dock-dbx', glow:'glow-dbx', conn:'conn-dbx' },
+      toolSAP: { id:'dock-s4',  glow:'glow-s4',  conn:'conn-s4'  },
+      toolSF:  { id:'dock-sf',  glow:'glow-sf',  conn:'conn-sf'  },
+      toolSN:  { id:'dock-sn',  glow:'glow-sn',  conn:'conn-sn'  },
+      toolBTP: { id:'dock-btp', glow:'glow-btp', conn:'conn-sn'  }
+    };
+    const entry = toolMap[toolId];
+    if (!entry) return;
+    const dockEl = document.getElementById(entry.id);
+    if (dockEl) dockEl.classList.add('active-tool', entry.glow);
+    const connEl = document.getElementById(entry.conn);
+    if (connEl) connEl.classList.add('flowing');
+  }
+
+  function triggerMention(tag) {
+    const mentionMap = {
+      '@SAP_S4_Agent':     'dock-s4',
+      '@Databricks':       'dock-dbx',
+      '@Salesforce_Agent': 'dock-sf',
+      '@ServiceNow_Agent': 'dock-sn',
+      '@BTP_Agent':        'dock-btp'
+    };
+    const dockId = mentionMap[tag];
+    if (!dockId) return;
+    const el = document.getElementById(dockId);
+    if (el) { el.classList.remove('mentioned'); void el.offsetWidth; el.classList.add('mentioned'); }
+  }
+
+  function scrollToBottom() { traceLog.scrollTop = traceLog.scrollHeight; }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  async function typeText(elId, text, speed = 16) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.classList.add('active');
+    const parts = text.split(/(@[A-Za-z_]+)/g);
+    for (const part of parts) {
+      if (part.startsWith('@')) {
+        triggerMention(part);
+        const sp = document.createElement('span');
+        sp.className = 'mention-text';
+        el.appendChild(sp);
+        for (const ch of part) { sp.innerHTML += ch; scrollToBottom(); await sleep(speed); }
+      } else {
+        for (const ch of part) {
+          if (ch === '\n') el.innerHTML += '<br>';
+          else el.innerHTML += ch;
+          scrollToBottom();
+          await sleep(speed);
+        }
+      }
+    }
+    el.classList.remove('active');
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  SIMULATION ENGINE
+  // ═══════════════════════════════════════════════════════
+  async function runSimulation() {
+    if (currentStep >= activeScript.length) {
+      setIdleStatus();
+      highlightTool(null);
+      document.querySelectorAll('.chat-avatar').forEach(a => {
+        a.classList.remove('waking');
+        a.classList.add('sleeping');
+      });
+      return;
+    }
+
+    const step = activeScript[currentStep];
+    const tsId = 'trace-' + currentStep;
+    currentStep++;
+
+    // ── EVENT ──
+    if (step.type === 'event') {
+      const stream = document.getElementById('eventStream');
+      const now = new Date().toISOString().slice(11, 23) + 'Z';
+      stream.innerHTML += `
+        <div class="event-card risk">
+          <div class="event-time">${now}</div>
+          <strong style="color:#EF4444;">${step.title}</strong><br>
+          <span style="color:#E2E8F0;">${step.content}</span>
+        </div>`;
+      stream.scrollTop = stream.scrollHeight;
+      setTimeout(runSimulation, step.delay);
+    }
+
+    // ── MESSAGE START ──
+    else if (step.type === 'message_start') {
+      const agentToolMap = { dbx:'toolDBX', sap:'toolSAP', sf:'toolSF', sn:'toolSN', btp:'toolBTP' };
+      updateStatus(`${step.name} waking…`, true);
+      highlightTool(agentToolMap[step.agent]);
+
+      // Minimise old bubbles
+      document.querySelectorAll('.chat-message').forEach(m => m.classList.add('minimized'));
+      document.querySelectorAll('.chat-avatar').forEach(a => {
+        a.classList.remove('waking');
+        a.classList.add('sleeping');
+      });
+
+      const stepIdx  = currentStep - 1;
+      const avatarLabel = { dbx:'DBX', sap:'S/4', sf:'SF', sn:'SN', btp:'BTP' }[step.agent] || '?';
+
+      container.innerHTML += `
+        <div class="chat-message agent-${step.agent}">
+          <div class="chat-avatar sleeping waking ${step.agent}" id="avatar-${stepIdx}">${avatarLabel}</div>
+          <div class="chat-content">
+            <div class="chat-name">${step.name}
+              <span class="chat-status" id="status-${stepIdx}"
+                    style="color:#A78BFA;border-color:rgba(167,139,250,0.3);">Waking Up…</span>
+            </div>
+            <div class="chat-bubble">
+              <div class="chat-thinking-block" id="think-block-${stepIdx}">
+                <div class="chat-thinking-header">
+                  <span class="pulse-dot" style="background:#A78BFA;box-shadow:none;animation:none;opacity:1;"></span>
+                  Analysing context
+                </div>
+                <div class="typing" id="think-text-${stepIdx}" style="color:#64748B;margin-top:5px;font-size:12px;"></div>
+              </div>
+              <div class="typing" id="${tsId}" style="display:none;margin-top:11px;"></div>
+            </div>
+          </div>
+        </div>`;
+
+      currentChatBubble = document.getElementById(tsId).parentElement;
+
+      await sleep(400);
+      document.getElementById(`status-${stepIdx}`).innerText = 'Thinking…';
+      await typeText(`think-text-${stepIdx}`, 'Ingesting signal context and loading tool schemas…', 5);
+      await sleep(350);
+
+      const statusEl = document.getElementById(`status-${stepIdx}`);
+      statusEl.innerText     = 'Active';
+      statusEl.style.color       = '#4ADE80';
+      statusEl.style.borderColor = 'rgba(74,222,128,0.3)';
+
+      const thinkHeader = document.querySelector(`#think-block-${stepIdx} .chat-thinking-header`);
+      if (thinkHeader) thinkHeader.innerHTML = `<span style="color:#4ADE80;">✓</span> Thought cycle complete`;
+      setTimeout(() => {
+        const b = document.getElementById(`think-block-${stepIdx}`);
+        if (b) b.classList.add('collapse');
+      }, 900);
+
+      updateStatus(`${step.name} responding…`, false);
+      const mainEl = document.getElementById(tsId);
+      mainEl.style.display = 'block';
+      await typeText(tsId, step.content, 7);
+      setTimeout(runSimulation, step.delay);
+    }
+
+    // ── ACTION ──
+    else if (step.type === 'action') {
+      updateStatus('Executing tool…', false);
+      highlightTool(step.tool);
+      currentChatBubble.innerHTML += `
+        <div class="chat-action-block">
+          <span style="color:#475569;">&gt; Executing API Tool…</span><br>
+          <div class="typing" id="${tsId}"></div>
+        </div>`;
+      await typeText(tsId, step.code, 5);
+      setTimeout(runSimulation, step.delay);
+    }
+
+    // ── OBSERVATION ──
+    else if (step.type === 'observation') {
+      updateStatus('Parsing observation…', true);
+      const innerThinkId = `inner-think-${currentStep - 1}`;
+      currentChatBubble.innerHTML += `
+        <div class="chat-observation-block">
+          <span style="color:#475569;">&gt; Tool Result Response</span><br>
+          <div class="typing" id="${tsId}"></div>
+        </div>
+        <div class="chat-thinking-block" style="margin-top:12px;" id="inner-block-${currentStep-1}">
+          <div class="chat-thinking-header">
+            <span class="pulse-dot" style="background:#A78BFA;box-shadow:none;animation:none;opacity:1;"></span>
+            Processing result
+          </div>
+          <div class="typing" id="${innerThinkId}" style="color:#64748B;margin-top:5px;font-size:12px;"></div>
+        </div>`;
+      await typeText(tsId, step.content, 3);
+      await typeText(innerThinkId, 'Parsing payload and updating world model…', 5);
+      await sleep(350);
+      const innerHeader = document.querySelector(`#inner-block-${currentStep-1} .chat-thinking-header`);
+      if (innerHeader) innerHeader.innerHTML = `<span style="color:#4ADE80;">✓</span> Payload evaluated`;
+      setTimeout(() => {
+        const b = document.getElementById(`inner-block-${currentStep-1}`);
+        if (b) b.classList.add('collapse');
+      }, 900);
+      setTimeout(runSimulation, step.delay);
+    }
+
+    // ── MESSAGE APPEND ──
+    else if (step.type === 'message_append') {
+      updateStatus('Synthesising response…', true);
+      highlightTool(null);
+      currentChatBubble.innerHTML += `<div style="margin-top:10px;" class="typing" id="${tsId}"></div>`;
+      await typeText(tsId, step.content, 16);
+      setTimeout(runSimulation, step.delay);
+    }
+
+    scrollToBottom();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  LOAD SCENARIO
+  // ═══════════════════════════════════════════════════════
+  function loadScenario(id) {
+    activeScript = id === 'disruption' ? simDisruption : simCascade;
+    currentStep = 0;
+    currentChatBubble = null;
+
+    // Hide picker, clear old messages
+    document.getElementById('waitingMsg').style.display = 'none';
+    container.querySelectorAll('.chat-message').forEach(m => m.remove());
+
+    // Set event stream
+    document.getElementById('eventStream').innerHTML =
+      id === 'disruption' ? bgEventsDisruption : bgEventsCascade;
+
+    // Reset dock
+    document.querySelectorAll('.dock-item').forEach(d =>
+      d.classList.remove('active-tool','glow-s4','glow-dbx','glow-sf','glow-sn','glow-btp','mentioned')
+    );
+    document.querySelectorAll('.dock-connector').forEach(c => c.classList.remove('flowing'));
+
+    // Show reset button
+    document.getElementById('resetBtn').style.display = 'block';
+
+    updateStatus('Processing event…', true);
+    runSimulation();
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  RESET
+  // ═══════════════════════════════════════════════════════
+  function resetConsole() {
+    activeScript = null;
+    currentStep = 0;
+    currentChatBubble = null;
+
+    container.querySelectorAll('.chat-message').forEach(m => m.remove());
+    document.getElementById('waitingMsg').style.display = 'flex';
+    document.getElementById('resetBtn').style.display   = 'none';
+
+    document.getElementById('eventStream').innerHTML = `
+      <div class="event-card">
+        <div class="event-time">06:14:22.301Z</div>
+        <strong>Order Confirmed — SO-82471</strong><br>
+        <span style="color:#64748B;">Apex Industries · $4.2M · Delivery: 18 days</span>
+      </div>
+      <div class="event-card">
+        <div class="event-time">07:02:09.718Z</div>
+        <strong>ATP Check Passed</strong><br>
+        <span style="color:#64748B;">SO-81247 · Harlan Systems · All DCs confirmed</span>
+      </div>
+      <div class="event-card">
+        <div class="event-time">09:04:12.119Z</div>
+        <strong>Databricks Risk Scan — Complete</strong><br>
+        <span style="color:#64748B;">1,241 open orders evaluated · 0 anomalies</span>
+      </div>`;
+
+    document.querySelectorAll('.dock-item').forEach(d =>
+      d.classList.remove('active-tool','glow-s4','glow-dbx','glow-sf','glow-sn','glow-btp','mentioned')
+    );
+    document.querySelectorAll('.dock-connector').forEach(c => c.classList.remove('flowing'));
+
+    const badge = document.getElementById('agentStatus');
+    badge.style.background  = 'rgba(100,116,139,0.1)';
+    badge.style.color       = '#64748B';
+    badge.style.borderColor = 'rgba(100,116,139,0.2)';
+    const dot = document.getElementById('pulseDot');
+    dot.style.background = '#64748B';
+    dot.style.boxShadow  = 'none';
+    document.getElementById('statusText').innerText = 'Select a scenario';
+  }
+  </script>
+
+</body>
+</html>

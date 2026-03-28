@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTC Agent — Risk Intelligence Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    /* ═══════════════════════ THEME ═══════════════════════ */
+    :root {
+      --bg:         #090d1a;
+      --surface:    #0f1524;
+      --panel:      #131c2e;
+      --panel-2:    #17233a;
+      --border:     rgba(255,255,255,0.065);
+      --border-h:   rgba(255,255,255,0.13);
+      --accent:     #6366f1;
+      --accent-2:   #22d3ee;
+      --good:       #10b981;
+      --watch:      #f59e0b;
+      --red:        #ef4444;
+      --text:       #f1f5f9;
+      --text-2:     #94a3b8;
+      --text-3:     #64748b;
+      --hdr-bg:     rgba(9,13,26,0.9);
+    }
+    [data-theme="light"] {
+      --bg:       #eef2f9;
+      --surface:  #e4eaf4;
+      --panel:    #ffffff;
+      --panel-2:  #f8faff;
+      --border:   rgba(0,0,0,0.08);
+      --border-h: rgba(0,0,0,0.15);
+      --text:     #0f172a;
+      --text-2:   #475569;
+      --text-3:   #94a3b8;
+      --hdr-bg:   rgba(238,242,249,0.92);
+    }
+
+    /* ═══════════════════════ RESET ═══════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ═══════════════════════ HEADER ═══════════════════════ */
+    .page-header {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.4rem;
+      height: 52px;
+      background: var(--hdr-bg);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      gap: 1rem;
+    }
+    .page-header__left { display: flex; align-items: center; gap: 0.7rem; flex-shrink: 0; }
+    .brand-wordmark {
+      font-size: 0.88rem; font-weight: 800; letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header-divider { width: 1px; height: 16px; background: var(--border); }
+    .product-label { font-size: 0.76rem; font-weight: 600; color: var(--text-2); }
+    .page-nav { display: flex; gap: 0.12rem; overflow-x: auto; }
+    .page-nav__link {
+      font-size: 0.74rem; font-weight: 500; color: var(--text-3);
+      text-decoration: none; padding: 0.26rem 0.58rem;
+      border-radius: 6px; white-space: nowrap;
+      transition: color 0.2s, background 0.2s;
+    }
+    .page-nav__link:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .page-nav__link.is-active { color: var(--accent); background: rgba(99,102,241,0.1); }
+    .header-actions { display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0; }
+    .risk-filter select {
+      background: var(--panel); border: 1px solid var(--border);
+      color: var(--text-2); padding: 0.28rem 0.6rem;
+      border-radius: 8px; font-size: 0.74rem;
+      font-family: 'Inter', sans-serif; cursor: pointer; outline: none;
+    }
+    .cockpit-link {
+      font-size: 0.74rem; font-weight: 600; color: var(--accent);
+      text-decoration: none; padding: 0.28rem 0.62rem;
+      border: 1px solid rgba(99,102,241,0.3); border-radius: 7px;
+      transition: background 0.2s;
+    }
+    .cockpit-link:hover { background: rgba(99,102,241,0.1); }
+    .theme-toggle {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 7px; padding: 0.28rem 0.5rem;
+      cursor: pointer; font-size: 0.9rem;
+    }
+    .theme-icon--light { display: none; }
+    [data-theme="light"] .theme-icon--dark  { display: none; }
+    [data-theme="light"] .theme-icon--light { display: inline; }
+
+    /* ═══════════════════════ ALERT BANNER ═══════════════════════ */
+    .alert-banner {
+      background: rgba(239,68,68,0.08);
+      border-bottom: 1px solid rgba(239,68,68,0.22);
+      padding: 0.55rem 1.4rem;
+    }
+    .alert-banner__inner {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.8rem; color: #fca5a5;
+      max-width: 1440px; margin: 0 auto;
+    }
+    .alert-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--red); box-shadow: 0 0 8px var(--red);
+      flex-shrink: 0; animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+    .alert-dismiss {
+      margin-left: auto; background: none; border: none;
+      color: var(--text-3); cursor: pointer; font-size: 1rem;
+      padding: 0 0.2rem; line-height: 1;
+    }
+
+    /* ═══════════════════════ HERO ═══════════════════════ */
+    .dash-hero {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.3rem 1.4rem 0.9rem;
+      max-width: 1440px; margin: 0 auto; gap: 1.5rem;
+    }
+    .dash-eyebrow {
+      display: block; font-size: 0.67rem; font-weight: 700;
+      letter-spacing: 0.13em; text-transform: uppercase;
+      color: var(--accent-2); margin-bottom: 0.35rem;
+    }
+    .dash-hero__left h1 {
+      font-size: 1.75rem; font-weight: 900;
+      letter-spacing: -0.03em; color: var(--text);
+    }
+    .dash-hero__left p { font-size: 0.82rem; color: var(--text-2); margin-top: 0.25rem; }
+    .dash-hero__right { display: flex; gap: 0.85rem; flex-shrink: 0; }
+    .hero-kpi {
+      text-align: center; padding: 0.7rem 1rem;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; min-width: 108px;
+    }
+    .hero-kpi__label {
+      display: block; font-size: 0.65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-3); margin-bottom: 0.28rem;
+    }
+    .hero-kpi__value {
+      display: block; font-size: 1.45rem; font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ═══════════════════════ KPI ROW ═══════════════════════ */
+    .kpi-row {
+      display: flex; gap: 0.8rem;
+      padding: 0 1.4rem 0.9rem;
+      max-width: 1440px; margin: 0 auto;
+      overflow-x: auto;
+    }
+    .kpi-card {
+      flex: 1; min-width: 148px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 0.9rem 1rem;
+      display: flex; gap: 0.8rem; align-items: flex-start;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover { border-color: rgba(99,102,241,0.3); box-shadow: 0 4px 18px rgba(99,102,241,0.08); }
+    .kpi-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 2px; }
+    .kpi-data { display: flex; flex-direction: column; gap: 0.18rem; }
+    .kpi-label { font-size: 0.68rem; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+    .kpi-value { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em; color: var(--text); line-height: 1.1; }
+    .kpi-value small { font-size: 0.85rem; font-weight: 600; color: var(--text-2); }
+    .kpi-delta { font-size: 0.68rem; font-weight: 600; }
+    .kpi-delta--good  { color: var(--good); }
+    .kpi-delta--watch { color: var(--watch); }
+    .kpi-delta--bad   { color: var(--red); }
+
+    /* ═══════════════════════ MAIN GRID ═══════════════════════ */
+    .dash-grid {
+      display: grid; grid-template-columns: 1.12fr 1fr;
+      gap: 0.9rem; padding: 0 1.4rem 2rem;
+      max-width: 1440px; margin: 0 auto;
+    }
+    .dash-col-left, .dash-col-right { display: flex; flex-direction: column; gap: 0.9rem; }
+
+    /* ═══════════════════════ PANELS ═══════════════════════ */
+    .dash-panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .dash-panel--ai   { border-color: rgba(99,102,241,0.18); }
+    .dash-panel--feed { border-color: rgba(34,211,238,0.14); }
+
+    .panel-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 0.95rem 1.15rem 0.7rem; gap: 0.75rem;
+    }
+    .panel-head h3 { font-size: 0.87rem; font-weight: 700; color: var(--text); margin-bottom: 0.12rem; }
+    .panel-head p  { font-size: 0.73rem; color: var(--text-3); }
+
+    .ai-badge {
+      font-size: 0.62rem; font-weight: 700; padding: 0.18rem 0.52rem;
+      border-radius: 100px; background: rgba(99,102,241,0.12);
+      color: #a5b4fc; border: 1px solid rgba(99,102,241,0.22); flex-shrink: 0;
+    }
+    .live-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em;
+      color: var(--good); flex-shrink: 0;
+    }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); animation: blink 1.2s infinite; }
+    .alert-count-badge {
+      font-size: 0.66rem; font-weight: 700; padding: 0.18rem 0.55rem;
+      border-radius: 100px; background: rgba(239,68,68,0.12);
+      color: #fca5a5; border: 1px solid rgba(239,68,68,0.22); flex-shrink: 0;
+    }
+    .map-legend {
+      display: flex; align-items: center; gap: 0.55rem;
+      font-size: 0.68rem; color: var(--text-3); flex-wrap: wrap;
+    }
+    .map-legend-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+
+    /* ═══════════════════════ MAP ═══════════════════════ */
+    #locationMap {
+      margin: 0 1.15rem 1.15rem;
+      border-radius: 10px; overflow: hidden; height: 296px;
+    }
+    .leaflet-container { background: #0a0f1e !important; }
+    .leaflet-tile-pane { filter: brightness(0.85) saturate(0.7); }
+
+    /* ═══════════════════════ CHARTS ═══════════════════════ */
+    .chart-container { padding: 0 1.15rem 1.15rem; }
+
+    /* ═══════════════════════ HEATMAP ═══════════════════════ */
+    .heatmap-wrap { padding: 0 1.15rem 1.15rem; }
+    .heatmap-grid { display: grid; grid-template-columns: 32px repeat(6, 1fr); gap: 3px; }
+    .heatmap-label {
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 5px; font-size: 9.5px; color: var(--text-3); font-weight: 600;
+    }
+    .heatmap-col-label {
+      text-align: center; padding: 3px 2px; font-size: 9px; color: var(--text-3); font-weight: 500;
+    }
+    .heatmap-cell {
+      height: 26px; border-radius: 4px; cursor: default;
+      transition: transform 0.15s, filter 0.15s;
+      position: relative;
+    }
+    .heatmap-cell:hover { transform: scale(1.12); filter: brightness(1.25); z-index: 2; }
+
+    /* ═══════════════════════ AI INSIGHTS ═══════════════════════ */
+    .ai-insights { padding: 0 1.15rem 1.15rem; display: flex; flex-direction: column; gap: 0.55rem; }
+    .ai-insight {
+      padding: 0.85rem 0.95rem; border-radius: 10px;
+      border-left: 3px solid; display: flex; gap: 0.7rem;
+      font-size: 0.78rem; line-height: 1.57;
+    }
+    .ai-insight--critical { background: rgba(239,68,68,0.06);  border-left-color: var(--red); }
+    .ai-insight--watch    { background: rgba(245,158,11,0.06); border-left-color: var(--watch); }
+    .ai-insight--good     { background: rgba(16,185,129,0.06); border-left-color: var(--good); }
+    .ai-insight__icon { font-size: 1.05rem; flex-shrink: 0; margin-top: 1px; }
+    .ai-insight strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 0.8rem; }
+    .ai-insight__evidence { color: var(--text-2); margin-bottom: 3px; }
+    .ai-insight__quote {
+      font-style: italic; color: var(--text-3); font-size: 0.73rem;
+      padding: 4px 8px; border-left: 2px solid var(--border); margin: 4px 0;
+    }
+    .ai-insight__footer {
+      display: flex; align-items: center; gap: 0.45rem;
+      flex-wrap: wrap; margin-top: 5px;
+    }
+    .ai-insight__badge {
+      font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 100px;
+    }
+    .ai-insight__badge--critical { background: rgba(239,68,68,0.15); color: #fca5a5; }
+    .ai-insight__badge--watch    { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .ai-insight__badge--good     { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .ai-insight__source { font-size: 0.66rem; color: var(--text-3); }
+    .ai-insight__link {
+      font-size: 0.66rem; color: var(--accent); text-decoration: none;
+      font-weight: 600; margin-left: auto;
+    }
+    .ai-insight__link:hover { text-decoration: underline; }
+
+    /* ═══════════════════════ ALERT CENTER ═══════════════════════ */
+    .alert-list { padding: 0 1.15rem 1.15rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .alert-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.7rem 0.85rem; border-radius: 10px;
+      border: 1px solid var(--border); gap: 0.7rem; font-size: 0.78rem;
+      transition: border-color 0.2s;
+    }
+    .alert-item--critical { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.2); }
+    .alert-item--high     { background: rgba(245,158,11,0.04); border-color: rgba(245,158,11,0.18); }
+    .alert-item--medium   { background: rgba(99,102,241,0.04); border-color: rgba(99,102,241,0.14); }
+    .alert-item__left { display: flex; align-items: flex-start; gap: 0.58rem; flex: 1; min-width: 0; }
+    .alert-severity {
+      font-size: 0.58rem; font-weight: 800; padding: 2px 5px;
+      border-radius: 4px; letter-spacing: 0.04em; flex-shrink: 0; margin-top: 2px;
+    }
+    .alert-severity--critical { background: rgba(239,68,68,0.2); color: #f87171; }
+    .alert-severity--high     { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .alert-severity--medium   { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+    .alert-item strong { color: var(--text); font-size: 0.78rem; display: block; }
+    .alert-item p      { color: var(--text-2); font-size: 0.72rem; margin-top: 1px; }
+    .alert-item small  { color: var(--text-3); font-size: 0.66rem; }
+    .alert-action {
+      flex-shrink: 0; font-size: 0.7rem; font-weight: 600;
+      padding: 0.28rem 0.7rem; border-radius: 7px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      color: var(--text-2); cursor: pointer; text-decoration: none;
+      white-space: nowrap; font-family: 'Inter', sans-serif;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .alert-action:hover { background: rgba(255,255,255,0.08); color: var(--text); }
+
+    /* ═══════════════════════ LIVE FEED ═══════════════════════ */
+    .feed-list { padding: 0 1.15rem 1.15rem; display: flex; flex-direction: column; gap: 0.55rem; }
+    .feed-item {
+      padding: 0.7rem 0.82rem; background: rgba(255,255,255,0.022);
+      border: 1px solid var(--border); border-radius: 10px;
+      font-size: 0.77rem; line-height: 1.52;
+      transition: border-color 0.2s;
+    }
+    .feed-item:hover { border-color: var(--border-h); }
+    .feed-item__header { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 3px; }
+    .feed-item__header strong { color: var(--text); font-size: 0.78rem; }
+    .feed-item p { color: var(--text-2); }
+    .feed-item__meta { display: flex; gap: 0.7rem; margin-top: 4px; font-size: 0.66rem; color: var(--text-3); }
+    .feed-pill {
+      font-size: 0.6rem; font-weight: 700; padding: 2px 6px;
+      border-radius: 100px; margin-left: auto; flex-shrink: 0;
+    }
+    .feed-pill--critical { background: rgba(239,68,68,0.14); color: #f87171; }
+    .feed-pill--watch    { background: rgba(245,158,11,0.14); color: #fcd34d; }
+    .feed-pill--good     { background: rgba(16,185,129,0.12); color: #6ee7b7; }
+    .feed-pill--resolved { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+
+    /* ═══════════════════════ ORDER ACTIVITY ═══════════════════════ */
+    .order-activity {
+      padding: 0 1.15rem 1.15rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+    }
+    .order-card {
+      padding: 0.8rem 0.85rem; border-radius: 10px;
+      border: 1px solid var(--border); position: relative;
+      overflow: hidden; font-size: 0.76rem;
+      background: rgba(255,255,255,0.018);
+      transition: border-color 0.2s;
+    }
+    .order-card:hover { border-color: var(--border-h); }
+    .order-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .order-card--good::before  { background: var(--good); }
+    .order-card--watch::before { background: var(--watch); }
+    .order-card--bad::before   { background: var(--red); }
+    .order-card__id {
+      font-size: 0.63rem; font-family: 'JetBrains Mono', monospace;
+      color: var(--text-3); margin-bottom: 3px; display: block;
+    }
+    .order-card__customer { font-weight: 700; color: var(--text); font-size: 0.78rem; display: block; }
+    .order-card__desc { font-size: 0.71rem; color: var(--text-2); margin-top: 3px; line-height: 1.45; }
+    .order-card__sys {
+      display: flex; gap: 4px; margin-top: 6px;
+    }
+    .sys-tag {
+      font-size: 0.58rem; font-weight: 800; padding: 1px 5px;
+      border-radius: 3px; color: white;
+    }
+    .sys-tag.s4  { background: #0A6ED1; }
+    .sys-tag.sf  { background: #00A1E0; }
+    .sys-tag.sn  { background: #62A08B; }
+    .sys-tag.dbx { background: #FF3621; }
+    .sys-tag.btp { background: #6366F1; }
+    .order-card__badge {
+      display: inline-block; font-size: 0.58rem; font-weight: 700;
+      padding: 2px 5px; border-radius: 4px; margin-top: 5px;
+    }
+    .order-card--good  .order-card__badge { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .order-card--watch .order-card__badge { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .order-card--bad   .order-card__badge { background: rgba(239,68,68,0.15); color: #f87171; }
+    .order-card__time {
+      position: absolute; bottom: 5px; right: 8px;
+      font-size: 0.6rem; color: var(--text-3);
+    }
+
+    /* ═══════════════════════ CUSTOMER HEALTH ═══════════════════════ */
+    .location-list { padding: 0 1.15rem 1.15rem; }
+    .loc-row {
+      display: flex; align-items: center; gap: 0.7rem;
+      padding: 0.55rem 0; border-bottom: 1px solid var(--border);
+      font-size: 0.78rem;
+    }
+    .loc-row:last-child { border-bottom: none; }
+    .loc-rank {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.66rem; font-weight: 800; flex-shrink: 0;
+    }
+    .loc-rank--top    { background: rgba(16,185,129,0.14); color: #6ee7b7; }
+    .loc-rank--bottom { background: rgba(239,68,68,0.12); color: #f87171; }
+    .loc-info { flex: 1; min-width: 0; }
+    .loc-info strong { color: var(--text); display: block; font-size: 0.78rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .loc-info span   { color: var(--text-3); font-size: 0.68rem; }
+    .loc-score { font-size: 1rem; font-weight: 900; letter-spacing: -0.02em; flex-shrink: 0; }
+    .loc-score--good  { color: var(--good); }
+    .loc-score--watch { color: var(--watch); }
+    .loc-score--bad   { color: var(--red); }
+    .loc-divider {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.45rem 0; color: var(--text-3); font-size: 0.68rem; font-weight: 600;
+    }
+    .loc-divider::before, .loc-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ═══════════════════════ FOOTER ═══════════════════════ */
+    .page-footer {
+      border-top: 1px solid var(--border);
+      padding: 0.9rem 1.4rem; max-width: 1440px; margin: 0 auto;
+    }
+    .footer-nav { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.45rem; }
+    .footer-link {
+      font-size: 0.72rem; color: var(--text-3); text-decoration: none;
+      padding: 0.2rem 0.45rem; border-radius: 5px; transition: color 0.2s;
+    }
+    .footer-link:hover { color: var(--text); }
+    .footer-link.is-active { color: var(--accent); }
+    .footer-copy { font-size: 0.7rem; color: var(--text-3); }
+
+    /* ═══════════════════════ ANIMATIONS ═══════════════════════ */
+    @keyframes fadeInUp {
+      from { opacity:0; transform:translateY(8px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .feed-item-new { animation: fadeInUp 0.45s ease forwards; }
+
+    /* ═══════════════════════ RESPONSIVE ═══════════════════════ */
+    @media (max-width: 1050px) {
+      .dash-grid { grid-template-columns: 1fr; }
+      .dash-hero { flex-direction: column; align-items: flex-start; }
+      .page-nav  { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header class="page-header">
+    <div class="page-header__left">
+      <div class="brand-wordmark">Lean Core</div>
+      <span class="header-divider"></span>
+      <span class="product-label">OTC Risk Dashboard</span>
+    </div>
+    <nav class="page-nav">
+      <a class="page-nav__link" href="otc-agent-story.html">Story</a>
+      <a class="page-nav__link" href="#">Live Orders</a>
+      <a class="page-nav__link" href="otc-agent-console.html">Agent Console</a>
+      <a class="page-nav__link is-active" href="#">Risk Dashboard</a>
+      <a class="page-nav__link" href="#">Architecture</a>
+      <a class="page-nav__link" href="#">System Health</a>
+    </nav>
+    <div class="header-actions">
+      <div class="risk-filter">
+        <select id="riskFilter" onchange="filterByRisk(this.value)">
+          <option value="all">All Risk Types</option>
+          <option value="supply">Supply Disruption</option>
+          <option value="carrier">Carrier Failure</option>
+          <option value="atp">ATP Shortfall</option>
+          <option value="payment">Payment Hold</option>
+        </select>
+      </div>
+      <a class="cockpit-link" href="#">CFO Cockpit →</a>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+        <span class="theme-icon theme-icon--dark">🌙</span>
+        <span class="theme-icon theme-icon--light">☀️</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══ ALERT BANNER ═══ -->
+  <div class="alert-banner" id="alertBanner">
+    <div class="alert-banner__inner">
+      <span class="alert-dot"></span>
+      <strong>🚨 Active Risk:</strong>&nbsp;
+      Apex Industries SO-82471 — Supply disruption at PENANG-01. 9-day shortfall on 3 SKUs. OTC Agent is responding autonomously.
+      <button class="alert-dismiss" onclick="document.getElementById('alertBanner').style.display='none'">✕</button>
+    </div>
+  </div>
+
+  <!-- ═══ HERO ═══ -->
+  <section class="dash-hero">
+    <div class="dash-hero__left">
+      <span class="dash-eyebrow">Signal Hub</span>
+      <h1>OTC Risk Intelligence</h1>
+      <p>Real-time order monitoring across 1,241 open orders · 68 enterprise accounts · 60 countries</p>
+    </div>
+    <div class="dash-hero__right">
+      <div class="hero-kpi">
+        <span class="hero-kpi__label">Open Orders</span>
+        <span class="hero-kpi__value" data-count="1241">0</span>
+      </div>
+      <div class="hero-kpi">
+        <span class="hero-kpi__label">Revenue at Risk</span>
+        <span class="hero-kpi__value" data-count="8.7" data-suffix="M" data-prefix="$">$0</span>
+      </div>
+      <div class="hero-kpi">
+        <span class="hero-kpi__label">Penalties Avoided</span>
+        <span class="hero-kpi__value" data-count="3.2" data-suffix="M" data-prefix="$">$0</span>
+      </div>
+      <div class="hero-kpi">
+        <span class="hero-kpi__label">Auto-Resolved</span>
+        <span class="hero-kpi__value" data-count="47">0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ KPI ROW ═══ -->
+  <section class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-data">
+        <span class="kpi-label">On-Time Rate</span>
+        <span class="kpi-value">94.2<small>%</small></span>
+        <span class="kpi-delta kpi-delta--good">↑ 1.1% vs last week</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-data">
+        <span class="kpi-label">Orders at Risk</span>
+        <span class="kpi-value">23</span>
+        <span class="kpi-delta kpi-delta--bad">↑ 8 vs yesterday</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">⬡</div>
+      <div class="kpi-data">
+        <span class="kpi-label">Avg Agent Response</span>
+        <span class="kpi-value">3.8<small>min</small></span>
+        <span class="kpi-delta kpi-delta--good">↓ 12% (autonomous)</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">⭐</div>
+      <div class="kpi-data">
+        <span class="kpi-label">Customer CSAT</span>
+        <span class="kpi-value">4.6<small>/5</small></span>
+        <span class="kpi-delta kpi-delta--good">↑ 0.2 vs last month</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🎯</div>
+      <div class="kpi-data">
+        <span class="kpi-label">ATP Accuracy</span>
+        <span class="kpi-value">98.1<small>%</small></span>
+        <span class="kpi-delta kpi-delta--good">↑ 0.4% vs last week</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-data">
+        <span class="kpi-label">Revenue Protected</span>
+        <span class="kpi-value">$12.4<small>M</small></span>
+        <span class="kpi-delta kpi-delta--good">This month · autonomous</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MAIN GRID ═══ -->
+  <section class="dash-grid">
+
+    <!-- ════ LEFT COLUMN ════ -->
+    <div class="dash-col-left">
+
+      <!-- GLOBAL ORDER MAP -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>🌍 Global Order Risk Map</h3>
+            <p>Live order status by customer location — colour coded by delivery risk</p>
+          </div>
+          <div class="map-legend">
+            <span class="map-legend-dot" style="background:#10b981"></span> On Track
+            <span class="map-legend-dot" style="background:#f59e0b"></span> At Risk
+            <span class="map-legend-dot" style="background:#ef4444"></span> Critical
+          </div>
+        </div>
+        <div id="locationMap"></div>
+      </div>
+
+      <!-- ACCOUNT PERFORMANCE CHART -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Account Delivery Performance</h3>
+            <p>On-time delivery % by customer — green = top tier, red = needs attention</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="accountChart" height="230"></canvas>
+        </div>
+      </div>
+
+      <!-- RISK CATEGORY CHART -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Risk by Category</h3>
+            <p>What the OTC Agent is resolving most this week — by root cause type</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="riskChart" height="170"></canvas>
+        </div>
+      </div>
+
+      <!-- ORDER RISK HEATMAP -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Order Risk by Day &amp; Time</h3>
+            <p>Risk signal intensity — darker = more disruptions detected in that window</p>
+          </div>
+        </div>
+        <div class="heatmap-wrap">
+          <div class="heatmap-grid" id="heatmapGrid"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ════ RIGHT COLUMN ════ -->
+    <div class="dash-col-right">
+
+      <!-- AI INSIGHTS -->
+      <div class="dash-panel dash-panel--ai">
+        <div class="panel-head">
+          <div>
+            <h3>🤖 AI Insights</h3>
+            <p>Pattern analysis across 1,241 open orders · Databricks + S/4HANA</p>
+          </div>
+          <span class="ai-badge">Claude 3.5</span>
+        </div>
+        <div class="ai-insights" id="aiInsights">
+
+          <div class="ai-insight ai-insight--critical" data-risk="supply">
+            <div class="ai-insight__icon">🚨</div>
+            <div>
+              <strong>Penang Supplier Disruption — $6.1M Exposure</strong>
+              <div class="ai-insight__evidence">
+                4 open orders sourcing from PENANG-01. Agent has autonomously re-routed 3 via Rotterdam &amp; air freight.
+                1 order (SO-82511) requires engineering sign-off for SKU substitution — <b>pending human review</b>.
+              </div>
+              <div class="ai-insight__quote">"Component shortfall detected 72 hours before any warehouse team would have flagged it through daily reporting." — OTC Agent Log</div>
+              <div class="ai-insight__evidence" style="margin-top:4px;font-weight:600;color:#f87171;">
+                S/4HANA: $2.1M SLA penalty exposure on SO-82471 alone. Autonomous resolution cost premium: $42K.
+              </div>
+              <div class="ai-insight__footer">
+                <span class="ai-insight__badge ai-insight__badge--critical">4 orders</span>
+                <span class="ai-insight__source">Databricks ML · SAP S/4HANA · Last 24 hours</span>
+                <a class="ai-insight__link" href="otc-agent-console.html">Watch Agent Console →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-insight ai-insight--watch" data-risk="carrier">
+            <div class="ai-insight__icon">⚠️</div>
+            <div>
+              <strong>MaerskAP Reliability Declining — 18 Upcoming Orders at Risk</strong>
+              <div class="ai-insight__evidence">
+                Carrier reliability score dropped from <b>94% → 67%</b> over 14 days across APAC lanes.
+                18 open orders on MaerskAP routes in the next 30 days. Consider pre-emptive carrier diversification to COSCO or Evergreen.
+              </div>
+              <div class="ai-insight__footer">
+                <span class="ai-insight__badge ai-insight__badge--watch">18 orders</span>
+                <span class="ai-insight__source">BTP Carrier Intelligence · Databricks · Last 14 days</span>
+                <a class="ai-insight__link" href="#">View Carrier Analysis →</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-insight ai-insight--good" data-risk="positive">
+            <div class="ai-insight__icon">✅</div>
+            <div>
+              <strong>Apex Industries — 6-Week OTC Performance Benchmark</strong>
+              <div class="ai-insight__evidence">
+                42 orders over 6 weeks. CSAT <b>4.9/5</b>. Zero SLA breaches. Proactive communication rate: <b>100%</b>.
+                Apex is the model account for demonstrating Lean Core OTC Agent ROI — recommend using in QBR.
+              </div>
+              <div class="ai-insight__quote">"We've never been notified about a delay before we felt it — until this quarter." — James Morrison, VP Procurement, Apex Industries</div>
+              <div class="ai-insight__footer">
+                <span class="ai-insight__badge ai-insight__badge--good">42 orders</span>
+                <span class="ai-insight__source">Salesforce CRM · SAP S/4HANA · Last 42 days</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-insight ai-insight--watch" data-risk="carrier">
+            <div class="ai-insight__icon">📊</div>
+            <div>
+              <strong>APAC Transit Variance Increasing — 11 Orders at Soft Risk</strong>
+              <div class="ai-insight__evidence">
+                Singapore–Rotterdam transit time variance: <b>+2.3 days</b> vs 30-day baseline. Port congestion at Tanjong Pagar.
+                11 orders on this route within the next 7 days. No SLA breach yet — monitoring threshold set at +4 days.
+              </div>
+              <div class="ai-insight__footer">
+                <span class="ai-insight__badge ai-insight__badge--watch">11 orders</span>
+                <span class="ai-insight__source">BTP + Databricks · Last 30 days</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ALERT CENTER -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>🚨 Alert Centre</h3>
+            <p>Orders requiring immediate human attention or agent action</p>
+          </div>
+          <span class="alert-count-badge" id="alertCount">3 active</span>
+        </div>
+        <div class="alert-list" id="alertList">
+          <div class="alert-item alert-item--critical" data-risk="supply">
+            <div class="alert-item__left">
+              <div class="alert-severity alert-severity--critical">CRITICAL</div>
+              <div>
+                <strong>Apex Industries — SO-82471 · $4.2M</strong>
+                <p>9-day component shortfall at PENANG-01. Agent re-routing via Rotterdam + air freight.</p>
+                <small>Detected 2 min ago · Agent responding · INC-55829 raised</small>
+              </div>
+            </div>
+            <a class="alert-action" href="otc-agent-console.html">View Agent →</a>
+          </div>
+          <div class="alert-item alert-item--high" data-risk="carrier">
+            <div class="alert-item__left">
+              <div class="alert-severity alert-severity--high">HIGH</div>
+              <div>
+                <strong>Nexon Corp — SO-81003 · $2.1M</strong>
+                <p>MaerskAP force majeure, APAC lanes. SLA breach in 2 days. Agent re-routing to COSCO Express.</p>
+                <small>9 min ago · 3 orders in cluster · Regional Ops notified</small>
+              </div>
+            </div>
+            <button class="alert-action" onclick="resolveAlert(this)">Resolve</button>
+          </div>
+          <div class="alert-item alert-item--medium" data-risk="payment">
+            <div class="alert-item__left">
+              <div class="alert-severity alert-severity--medium">MEDIUM</div>
+              <div>
+                <strong>Harlan Systems — SO-81247 · $1.8M</strong>
+                <p>Payment hold flagged by AR. 48-hr resolution window before SLA impact. Awaiting finance sign-off.</p>
+                <small>31 min ago · AR team notified · No SLA risk for 48h</small>
+              </div>
+            </div>
+            <button class="alert-action" onclick="resolveAlert(this)">Resolve</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE FEED -->
+      <div class="dash-panel dash-panel--feed">
+        <div class="panel-head">
+          <div>
+            <h3>Live Order Event Feed</h3>
+            <p>Real-time OTC agent actions and order events</p>
+          </div>
+          <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+        </div>
+        <div class="feed-list" id="feedList">
+          <div class="feed-item" data-risk="supply">
+            <div class="feed-item__header">
+              <strong>Agent Resolved — SO-82471 Apex Industries</strong>
+              <span class="feed-pill feed-pill--resolved">Resolved</span>
+            </div>
+            <p>Rotterdam partial shipment triggered. Air freight PO-91847 raised for CTRL-4401. Net delay: 2 days vs 9.</p>
+            <div class="feed-item__meta">
+              <span>OTC Agent</span><span>2 min ago</span><span>⬡ Autonomous</span>
+            </div>
+          </div>
+          <div class="feed-item" data-risk="supply">
+            <div class="feed-item__header">
+              <strong>Customer Notified — James Morrison, Apex Industries</strong>
+              <span class="feed-pill feed-pill--good">Good</span>
+            </div>
+            <p>Proactive delivery update sent via Salesforce. Revised ETAs, $15K goodwill credit applied. CRM case CASE-77201 logged.</p>
+            <div class="feed-item__meta">
+              <span>Salesforce Agent</span><span>4 min ago</span><span>✉️ Email delivered</span>
+            </div>
+          </div>
+          <div class="feed-item" data-risk="carrier">
+            <div class="feed-item__header">
+              <strong>Risk Detected — SO-81003 Nexon Corp</strong>
+              <span class="feed-pill feed-pill--critical">Critical</span>
+            </div>
+            <p>MaerskAP force majeure across APAC lanes. 23 open orders ($8.7M) assessed. Triage scoring underway.</p>
+            <div class="feed-item__meta">
+              <span>BTP + Databricks</span><span>9 min ago</span><span>🌐 APAC impact</span>
+            </div>
+          </div>
+          <div class="feed-item" data-risk="atp">
+            <div class="feed-item__header">
+              <strong>ATP Confirmed — SO-82901 TechBase Frankfurt</strong>
+              <span class="feed-pill feed-pill--good">On Track</span>
+            </div>
+            <p>All 8 SKUs confirmed across 3 distribution centres. Production order created. Delivery committed: 12 days.</p>
+            <div class="feed-item__meta">
+              <span>Joule Agent (S/4HANA)</span><span>14 min ago</span><span>✅ No risk</span>
+            </div>
+          </div>
+          <div class="feed-item" data-risk="supply">
+            <div class="feed-item__header">
+              <strong>P1 Ticket Raised — INC-55829</strong>
+              <span class="feed-pill feed-pill--watch">Watch</span>
+            </div>
+            <p>Regional Ops EMEA assigned for SO-82471 logistics coordination. Priya Nair notified. SLA: 4-hour acknowledgment.</p>
+            <div class="feed-item__meta">
+              <span>ServiceNow Agent</span><span>18 min ago</span><span>🎫 P1 open</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECENT ORDER ACTIVITY -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Recent Order Activity</h3>
+            <p>Latest agent resolutions and order events</p>
+          </div>
+        </div>
+        <div class="order-activity">
+          <div class="order-card order-card--good" data-risk="supply">
+            <span class="order-card__id">SO-82471</span>
+            <span class="order-card__customer">Apex Industries</span>
+            <div class="order-card__desc">Re-routed via Rotterdam + air freight. Net delay 2 days.</div>
+            <div class="order-card__sys">
+              <span class="sys-tag dbx">DBX</span>
+              <span class="sys-tag s4">S/4</span>
+              <span class="sys-tag sf">SF</span>
+              <span class="sys-tag sn">SN</span>
+            </div>
+            <span class="order-card__badge">✓ Resolved</span>
+            <span class="order-card__time">2 min ago</span>
+          </div>
+          <div class="order-card order-card--bad" data-risk="carrier">
+            <span class="order-card__id">SO-81003</span>
+            <span class="order-card__customer">Nexon Corp</span>
+            <div class="order-card__desc">APAC carrier disruption. Re-routing to COSCO Express.</div>
+            <div class="order-card__sys">
+              <span class="sys-tag btp">BTP</span>
+              <span class="sys-tag dbx">DBX</span>
+              <span class="sys-tag s4">S/4</span>
+            </div>
+            <span class="order-card__badge">⚠ At Risk</span>
+            <span class="order-card__time">9 min ago</span>
+          </div>
+          <div class="order-card order-card--good" data-risk="atp">
+            <span class="order-card__id">SO-82901</span>
+            <span class="order-card__customer">TechBase Frankfurt</span>
+            <div class="order-card__desc">ATP confirmed across 3 DCs. All 8 SKUs allocated.</div>
+            <div class="order-card__sys">
+              <span class="sys-tag s4">S/4</span>
+            </div>
+            <span class="order-card__badge">✓ On Track</span>
+            <span class="order-card__time">14 min ago</span>
+          </div>
+          <div class="order-card order-card--good" data-risk="carrier">
+            <span class="order-card__id">SO-81689</span>
+            <span class="order-card__customer">DeltaTech London</span>
+            <div class="order-card__desc">COSCO Express re-route confirmed. +1 day delay, within SLA.</div>
+            <div class="order-card__sys">
+              <span class="sys-tag s4">S/4</span>
+              <span class="sys-tag sf">SF</span>
+            </div>
+            <span class="order-card__badge">✓ Re-routed</span>
+            <span class="order-card__time">22 min ago</span>
+          </div>
+          <div class="order-card order-card--watch" data-risk="payment">
+            <span class="order-card__id">SO-81247</span>
+            <span class="order-card__customer">Harlan Systems</span>
+            <div class="order-card__desc">Payment hold flagged. Finance team notified. 48h window.</div>
+            <div class="order-card__sys">
+              <span class="sys-tag sn">SN</span>
+              <span class="sys-tag sf">SF</span>
+            </div>
+            <span class="order-card__badge">⏳ Pending</span>
+            <span class="order-card__time">31 min ago</span>
+          </div>
+          <div class="order-card order-card--good" data-risk="atp">
+            <span class="order-card__id">SO-82510</span>
+            <span class="order-card__customer">IndusTek Mumbai</span>
+            <div class="order-card__desc">Production order created. Delivery confirmed: 15 days.</div>
+            <div class="order-card__sys">
+              <span class="sys-tag s4">S/4</span>
+              <span class="sys-tag sf">SF</span>
+            </div>
+            <span class="order-card__badge">✓ On Track</span>
+            <span class="order-card__time">45 min ago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOMER HEALTH -->
+      <div class="dash-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Customer OTC Health</h3>
+            <p>Top &amp; bottom accounts by delivery performance</p>
+          </div>
+        </div>
+        <div class="location-list">
+          <div class="loc-row" data-risk="positive">
+            <div class="loc-rank loc-rank--top">1</div>
+            <div class="loc-info"><strong>Apex Industries</strong><span>Dallas, TX · 42 orders · Zero SLA breaches</span></div>
+            <div class="loc-score loc-score--good">4.9</div>
+          </div>
+          <div class="loc-row" data-risk="positive">
+            <div class="loc-rank loc-rank--top">2</div>
+            <div class="loc-info"><strong>TechBase Frankfurt</strong><span>Frankfurt, DE · 28 orders · 100% on time</span></div>
+            <div class="loc-score loc-score--good">4.7</div>
+          </div>
+          <div class="loc-row" data-risk="positive">
+            <div class="loc-rank loc-rank--top">3</div>
+            <div class="loc-info"><strong>Harlan Systems</strong><span>Boston, MA · 31 orders · 1 active hold</span></div>
+            <div class="loc-score loc-score--good">4.6</div>
+          </div>
+          <div class="loc-row" data-risk="positive">
+            <div class="loc-rank loc-rank--top">4</div>
+            <div class="loc-info"><strong>IndusTek Mumbai</strong><span>Mumbai, IN · 19 orders · Consistent CSAT</span></div>
+            <div class="loc-score loc-score--good">4.4</div>
+          </div>
+          <div class="loc-divider"><span>⚠️ Needs Attention</span></div>
+          <div class="loc-row" data-risk="carrier">
+            <div class="loc-rank loc-rank--bottom">65</div>
+            <div class="loc-info"><strong>Meridian Global</strong><span>Singapore · 12 orders · APAC carrier risk</span></div>
+            <div class="loc-score loc-score--bad">2.3</div>
+          </div>
+          <div class="loc-row" data-risk="carrier">
+            <div class="loc-rank loc-rank--bottom">66</div>
+            <div class="loc-info"><strong>Nexum Ltd</strong><span>Sydney, AU · 8 orders · MaerskAP affected</span></div>
+            <div class="loc-score loc-score--bad">2.1</div>
+          </div>
+          <div class="loc-row" data-risk="carrier">
+            <div class="loc-rank loc-rank--bottom">67</div>
+            <div class="loc-info"><strong>GlobalCo</strong><span>Tokyo, JP · 6 orders · 3 active SLA risks</span></div>
+            <div class="loc-score loc-score--bad">1.9</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="page-footer">
+    <div class="footer-nav">
+      <a class="footer-link" href="otc-agent-story.html">Story</a>
+      <a class="footer-link" href="#">Live Orders</a>
+      <a class="footer-link" href="otc-agent-console.html">Agent Console</a>
+      <a class="footer-link is-active" href="#">Risk Dashboard</a>
+      <a class="footer-link" href="#">Architecture</a>
+      <a class="footer-link" href="#">System Health</a>
+    </div>
+    <p class="footer-copy">OTC Experience Agent — Lean Core Demo · GlobalTech Industrial</p>
+  </footer>
+
+  <script>
+  // ═══════════════════════════════════════════════════
+  //  THEME TOGGLE
+  // ═══════════════════════════════════════════════════
+  const html = document.documentElement;
+  const saved = localStorage.getItem('otcTheme') || 'dark';
+  html.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('otcTheme', next);
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  KPI COUNTER ANIMATION
+  // ═══════════════════════════════════════════════════
+  document.querySelectorAll('.hero-kpi__value[data-count]').forEach(el => {
+    const target   = parseFloat(el.dataset.count);
+    const prefix   = el.dataset.prefix || '';
+    const suffix   = el.dataset.suffix || '';
+    const decimals = target % 1 !== 0 ? 1 : 0;
+    const duration = 1800;
+    const start    = performance.now();
+
+    function tick(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const value = (target * ease).toFixed(decimals);
+      el.textContent = prefix + value + suffix;
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  CHART.JS DEFAULTS
+  // ═══════════════════════════════════════════════════
+  Chart.defaults.color        = '#64748b';
+  Chart.defaults.borderColor  = 'rgba(255,255,255,0.06)';
+  Chart.defaults.font.family  = 'Inter';
+  Chart.defaults.font.size    = 11;
+
+  // ═══════════════════════════════════════════════════
+  //  ACCOUNT PERFORMANCE CHART
+  // ═══════════════════════════════════════════════════
+  const acctCtx = document.getElementById('accountChart').getContext('2d');
+  new Chart(acctCtx, {
+    type: 'bar',
+    data: {
+      labels: [
+        'Apex Industries','TechBase Frankfurt','Harlan Systems','IndusTek Mumbai',
+        'DeltaTech London','Nexon Corp (resolving)','Meridian Global','Nexum Sydney','GlobalCo Tokyo'
+      ],
+      datasets: [{
+        data: [97, 94, 92, 88, 84, 78, 61, 58, 52],
+        backgroundColor: [
+          '#10b981','#10b981','#10b981','#10b981','#10b981',
+          '#f59e0b','#ef4444','#ef4444','#ef4444'
+        ],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => `  ${ctx.raw}% on-time delivery` }
+        }
+      },
+      scales: {
+        x: {
+          min: 40, max: 100,
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { callback: v => v + '%' }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  RISK CATEGORY CHART
+  // ═══════════════════════════════════════════════════
+  const riskCtx = document.getElementById('riskChart').getContext('2d');
+  new Chart(riskCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Supply Disruption','Carrier Failure','ATP Shortfall','Payment Hold','Demand Surge'],
+      datasets: [{
+        label: '% of Resolved Risks',
+        data: [34, 28, 19, 11, 8],
+        backgroundColor: ['#ef4444','#ef4444','#f59e0b','#f59e0b','#6366f1'],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `  ${ctx.raw}% of all risks this week` } }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { callback: v => v + '%' }
+        },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  HEATMAP
+  // ═══════════════════════════════════════════════════
+  const heatData = {
+    days:  ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    times: ['0:00','4:00','8:00','12:00','16:00','20:00'],
+    values: [
+      [1,2,5,4,6,3],
+      [1,2,6,5,7,3],
+      [2,3,7,6,8,4],
+      [1,2,5,4,6,3],
+      [1,3,8,7,9,5],
+      [0,1,3,2,4,2],
+      [0,1,2,1,3,1]
+    ]
+  };
+
+  function riskColor(v) {
+    const t = v / 9;
+    if (t < 0.2) return `rgba(16,185,129,${0.1 + t * 0.5})`;
+    if (t < 0.5) return `rgba(245,158,11,${0.2 + t * 0.6})`;
+    return `rgba(239,68,68,${0.2 + t * 0.8})`;
+  }
+
+  const grid = document.getElementById('heatmapGrid');
+  // Header row
+  grid.innerHTML += '<div class="heatmap-label"></div>';
+  heatData.times.forEach(t => {
+    grid.innerHTML += `<div class="heatmap-col-label">${t}</div>`;
+  });
+  // Data rows
+  heatData.days.forEach((day, di) => {
+    grid.innerHTML += `<div class="heatmap-label">${day}</div>`;
+    heatData.values[di].forEach((val, ti) => {
+      grid.innerHTML += `<div class="heatmap-cell" style="background:${riskColor(val)}"
+        title="${day} ${heatData.times[ti]} — Risk level: ${val}/9"></div>`;
+    });
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  LEAFLET MAP
+  // ═══════════════════════════════════════════════════
+  const map = L.map('locationMap', { zoomControl: false, attributionControl: false }).setView([25, 20], 2);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CartoDB',
+    maxZoom: 14
+  }).addTo(map);
+
+  L.control.attribution({ prefix: false, position: 'bottomright' }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  function marker(color, size, pulse) {
+    const shadow = pulse ? `box-shadow:0 0 0 0 ${color};animation:mapPulse 1.5s infinite;` : `box-shadow:0 0 6px ${color};`;
+    return L.divIcon({
+      className: '',
+      html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};${shadow}border:2px solid rgba(255,255,255,0.35);"></div>`,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2]
+    });
+  }
+
+  // Add CSS for pulse animation to head
+  const style = document.createElement('style');
+  style.textContent = `@keyframes mapPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+    70%  { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }`;
+  document.head.appendChild(style);
+
+  // Critical markers (red, pulsing)
+  const critical = [
+    [3.1,  101.7, 'PENANG-01 Supplier Disruption · 4 orders at risk · $6.1M'],
+    [-33.9, 151.2, 'Nexum Ltd (Sydney) · APAC carrier impact'],
+    [35.7,  139.7, 'GlobalCo Tokyo · MaerskAP disruption · 3 SLA risks'],
+  ];
+  critical.forEach(([lat, lng, popup]) => {
+    L.marker([lat, lng], { icon: marker('#ef4444', 13, true) })
+      .bindPopup(`<span style="font-size:12px;font-family:Inter,sans-serif;">${popup}</span>`)
+      .addTo(map);
+  });
+
+  // At-risk markers (amber)
+  const atRisk = [
+    [1.3,   103.8, 'Singapore Hub · APAC transit point · +2.3d variance'],
+    [22.3,  114.2, 'Meridian Global (HK) · 3 orders · SLA watch'],
+    [37.6,  127.0, 'COSCO Alt Route · Monitoring'],
+  ];
+  atRisk.forEach(([lat, lng, popup]) => {
+    L.marker([lat, lng], { icon: marker('#f59e0b', 11, false) })
+      .bindPopup(`<span style="font-size:12px;font-family:Inter,sans-serif;">${popup}</span>`)
+      .addTo(map);
+  });
+
+  // On-track markers (green)
+  const onTrack = [
+    [51.9,   4.5,  'Rotterdam DC · Active · Apex partial shipment en route'],
+    [32.8,  -96.8, 'Apex Industries (Dallas) · $4.2M · Agent resolved ✓'],
+    [41.9,  -87.6, 'Chicago DC · Nominal · 2 outbound orders'],
+    [51.5,  -0.1,  'DeltaTech London · COSCO re-route confirmed ✓'],
+    [50.1,   8.7,  'TechBase Frankfurt · ATP confirmed · 12-day delivery'],
+    [42.4,  -71.1, 'Harlan Systems (Boston) · Payment hold · 48h window'],
+    [40.7,  -74.0, 'Nexon Corp (NY) · Re-routing underway'],
+    [19.1,   72.9, 'IndusTek Mumbai · On track · 15-day delivery'],
+  ];
+  onTrack.forEach(([lat, lng, popup]) => {
+    L.marker([lat, lng], { icon: marker('#10b981', 10, false) })
+      .bindPopup(`<span style="font-size:12px;font-family:Inter,sans-serif;">${popup}</span>`)
+      .addTo(map);
+  });
+
+  // ═══════════════════════════════════════════════════
+  //  FILTER
+  // ═══════════════════════════════════════════════════
+  function filterByRisk(val) {
+    const all = document.querySelectorAll('[data-risk]');
+    all.forEach(el => {
+      if (val === 'all' || el.dataset.risk === val || el.dataset.risk === 'positive') {
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+    updateAlertCount();
+  }
+
+  function updateAlertCount() {
+    const visible = document.querySelectorAll('#alertList .alert-item:not([style*="display: none"])').length;
+    document.getElementById('alertCount').textContent = visible + ' active';
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  RESOLVE ALERT
+  // ═══════════════════════════════════════════════════
+  function resolveAlert(btn) {
+    const item = btn.closest('.alert-item');
+    item.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(20px)';
+    setTimeout(() => { item.remove(); updateAlertCount(); }, 420);
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  LIVE FEED TICKER
+  // ═══════════════════════════════════════════════════
+  const newEvents = [
+    { risk: 'carrier', title: 'Agent Re-routing — SO-81003 Nexon Corp', pill: 'feed-pill--watch', pillText: 'In Progress',
+      body: 'COSCO Express capacity confirmed for APAC re-route. Updated ETA: +1 day. Within SLA.', meta: 'OTC Agent', time: 'just now', icon: '🚢' },
+    { risk: 'atp', title: 'ATP Confirmed — SO-83012 Meridian Global', pill: 'feed-pill--good', pillText: 'On Track',
+      body: 'Singapore hub confirmed 4 of 6 SKUs. 2 SKUs sourced from Rotterdam. Delivery: 16 days.', meta: 'Joule Agent (S/4HANA)', time: '1 min ago', icon: '✅' },
+  ];
+
+  let eventIdx = 0;
+  setInterval(() => {
+    if (eventIdx >= newEvents.length) return;
+    const ev = newEvents[eventIdx++];
+    const feed = document.getElementById('feedList');
+    const div = document.createElement('div');
+    div.className = 'feed-item feed-item-new';
+    div.dataset.risk = ev.risk;
+    div.innerHTML = `
+      <div class="feed-item__header">
+        <strong>${ev.title}</strong>
+        <span class="feed-pill ${ev.pill}">${ev.pillText}</span>
+      </div>
+      <p>${ev.body}</p>
+      <div class="feed-item__meta">
+        <span>${ev.meta}</span><span>${ev.time}</span><span>${ev.icon}</span>
+      </div>`;
+    feed.insertBefore(div, feed.firstChild);
+    // Remove oldest if more than 7
+    const items = feed.querySelectorAll('.feed-item');
+    if (items.length > 7) items[items.length - 1].remove();
+  }, 12000);
+  </script>
+
+</body>
+</html>
