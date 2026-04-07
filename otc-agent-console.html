@@ -609,8 +609,8 @@
         <div class="dock-connector" id="conn-dbx"></div>
 
         <div class="dock-item" id="dock-s4">
-          <div class="dock-icon s4">S/4</div>
-          <span>SAP S/4HANA</span>
+          <div class="dock-icon s4">aATP</div>
+          <span>S/4HANA · aATP</span>
         </div>
         <div class="dock-connector" id="conn-s4"></div>
 
@@ -700,27 +700,27 @@
     },
     {
       type: 'message_append',
-      content: 'Order SO-82471 (Apex Industries, $4.2M) will miss its committed delivery by 9 days. SLA penalty exposure: $2.1M. @SAP_S4_Agent run global ATP for the 3 affected SKUs and surface any re-sourcing options across the distribution network.',
+      content: 'Order SO-82471 (Apex Industries, $4.2M) will miss its committed delivery by 9 days. SLA penalty exposure: $2.1M. @aATP_Agent invoke Alternative-Based Confirmation (ABC) for the 3 affected SKUs — surface all viable plant and location substitutions across the global network, then trigger a BOP run for any other orders on the same Penang supply.',
       delay: 900
     },
     {
-      type: 'message_start', agent: 'sap', name: 'Joule Agent (S/4HANA)',
-      content: 'Running global ATP check across all distribution centres for ACT-7712, ACT-7713, and CTRL-4401. Cross-referencing transit inventory and alternative supplier lead times...',
+      type: 'message_start', agent: 'sap', name: 'aATP Agent (S/4HANA)',
+      content: 'Invoking aATP Alternative-Based Confirmation (ABC) — scanning all plants and DCs for ACT-7712, ACT-7713, and CTRL-4401. Evaluating plant substitution, location substitution, and transit stock. Will also trigger Backorder Processing (BOP) to reconfirm all orders sharing the PENANG-01 supply...',
       delay: 1100
     },
     {
       type: 'action', tool: 'toolSAP',
-      code: 'sap.s4hana.mm.run_atp_check({\n  "order":  "SO-82471",\n  "skus":   ["ACT-7712", "ACT-7713", "CTRL-4401"],\n  "scope":  "GLOBAL_NETWORK",\n  "include_transit": true\n})\n\nsap.s4hana.sd.update_delivery_schedule({\n  "order": "SO-82471",\n  "partial_ship": {\n    "items": ["ACT-7712", "ACT-7713"],\n    "dc":   "ROTTERDAM",\n    "date": "2025-04-01"\n  },\n  "remainder": {\n    "items": ["CTRL-4401"],\n    "mode": "AIR_FREIGHT",\n    "po":   "PO-91847",\n    "date": "2025-04-03"\n  },\n  "reason": "AI_SUPPLY_DISRUPTION_MITIGATION"\n})',
+      code: '// Step 1 — aATP ABC: find all alternative confirmation proposals\naATP.abc.findAlternatives({\n  "order":   "SO-82471",\n  "skus":    ["ACT-7712", "ACT-7713", "CTRL-4401"],\n  "methods": ["PLANT_SUBSTITUTION", "LOCATION_SUBSTITUTION"],\n  "scope":   "GLOBAL_NETWORK",\n  "include_transit": true,\n  "supply_protection_tier": "TIER_1"\n})\n\n// Step 2 — aATP ABC: commit the selected alternative proposal\naATP.abc.commitAlternative({\n  "order":    "SO-82471",\n  "proposal": {\n    "ACT-7712":  { "dc": "ROTTERDAM", "qty": 850,  "date": "2025-04-01" },\n    "ACT-7713":  { "dc": "ROTTERDAM", "qty": 920,  "date": "2025-04-01" },\n    "CTRL-4401": { "mode": "AIR_FREIGHT", "po": "PO-91847", "date": "2025-04-03" }\n  },\n  "reason": "AGENT_SUPPLY_DISRUPTION_MITIGATION"\n})\n\n// Step 3 — aATP BOP: reprocess ALL orders affected by PENANG-01 shortfall\naATP.bop.triggerRun({\n  "filter": { "disruption_id": "PENANG_LOGISTICS_2025-03" },\n  "strategy": "SUPPLY_PROTECTION_PRIORITY",\n  "mode": "IMMEDIATE"\n})',
       delay: 1500
     },
     {
       type: 'observation',
-      content: '{\n  "atp_results": {\n    "ACT-7712":  { "rotterdam": 850, "status": "AVAILABLE" },\n    "ACT-7713":  { "rotterdam": 920, "status": "AVAILABLE" },\n    "CTRL-4401": { "air_freight": "FREIGHTAIR-GLOBAL", "status": "SOURCEABLE" }\n  },\n  "delivery_updated": true,\n  "new_schedule": {\n    "partial_1": "2025-04-01 — Rotterdam dispatched",\n    "partial_2": "2025-04-03 — Air freight PO-91847 raised"\n  },\n  "net_delay":       "2 days (vs 9 without intervention)",\n  "cost_premium":    "$42K",\n  "sla_risk_avoided": "$2.1M",\n  "policy_check":    "Within autonomous action limits — no approval required"\n}',
+      content: '{\n  "abc_proposals": {\n    "ACT-7712":  { "method": "PLANT_SUBSTITUTION", "dc": "ROTTERDAM", "qty": 850,  "status": "CONFIRMED" },\n    "ACT-7713":  { "method": "PLANT_SUBSTITUTION", "dc": "ROTTERDAM", "qty": 920,  "status": "CONFIRMED" },\n    "CTRL-4401": { "method": "LOCATION_SUBSTITUTION", "mode": "AIR_FREIGHT",       "status": "CONFIRMED" }\n  },\n  "alternative_committed": true,\n  "new_schedule": {\n    "partial_1": "2025-04-01 — Rotterdam confirmed by aATP ABC",\n    "partial_2": "2025-04-03 — Air freight PO-91847 raised"\n  },\n  "bop_run": {\n    "status":          "COMPLETE",\n    "orders_assessed":  14,\n    "reconfirmed":      13,\n    "escalated":         1,\n    "escalation_reason": "No ABC alternative found — requires human review"\n  },\n  "net_delay":        "2 days (vs 9 without intervention)",\n  "cost_premium":     "$42K",\n  "sla_risk_avoided": "$2.1M",\n  "policy_check":     "Within aATP Supply Protection autonomous action limits"\n}',
       delay: 1100
     },
     {
       type: 'message_append',
-      content: 'Rotterdam hub covers ACT-7712 and ACT-7713 in full. CTRL-4401 sourced via expedited air freight. Delivery re-scheduled: partial on April 1, balance April 3. Net delay: 2 days — not 9. Cost premium $42K against $2.1M in SLA risk. Both within autonomous policy limits.\n\n@Salesforce_Agent draft and send a proactive update to Apex — 6 days before the original committed date.',
+      content: 'aATP ABC confirmed Rotterdam for ACT-7712 and ACT-7713, and air freight for CTRL-4401. Delivery re-scheduled: partial on April 1, balance April 3. Net delay: 2 days — not 9. Cost premium $42K against $2.1M in SLA risk. BOP run also reconfirmed 13 other orders on the same Penang supply — 1 escalated for human review (no ABC alternative found).\n\n@Salesforce_Agent draft and send a proactive update to Apex — 6 days before the original committed date.',
       delay: 900
     },
     {
@@ -812,22 +812,22 @@
     },
     {
       type: 'message_append',
-      content: 'Top 5 orders carry $1.38M in combined SLA penalties within 4 days. The remaining 18 need proactive advisories only — no breach within 7 days. @SAP_S4_Agent re-route the critical 5 through alternative carriers now.',
+      content: 'Top 5 orders carry $1.38M in combined SLA penalties within 4 days. The remaining 18 need proactive advisories only — no breach within 7 days. @aATP_Agent invoke ABC for carrier-level location substitution on the critical 5 — find alternative carrier routes and reconfirm delivery schedules now.',
       delay: 900
     },
     {
-      type: 'message_start', agent: 'sap', name: 'Joule Agent (S/4HANA)',
-      content: 'Querying transportation management for alternative carrier capacity across the 5 critical orders. Evaluating sea and air freight options against delay tolerance and cost policy...',
+      type: 'message_start', agent: 'sap', name: 'aATP Agent (S/4HANA)',
+      content: 'Invoking aATP ABC with location substitution method — evaluating alternative carrier routes across COSCO, Evergreen, and CargoluxAir for the 5 critical orders. Checking supply protection tiers and policy limits per order...',
       delay: 1100
     },
     {
       type: 'action', tool: 'toolSAP',
-      code: 'sap.s4hana.tm.find_alt_carriers({\n  "orders": [\n    "SO-81003","SO-81247","SO-81501","SO-81689","SO-81712"\n  ],\n  "constraints": {\n    "max_delay_days": 2,\n    "modes": ["SEA_FREIGHT", "AIR_FREIGHT"]\n  },\n  "auto_book_within_policy": true\n})',
+      code: '// aATP ABC — carrier-level location substitution for 5 critical orders\naATP.abc.findAlternatives({\n  "orders":  ["SO-81003","SO-81247","SO-81501","SO-81689","SO-81712"],\n  "method":  "LOCATION_SUBSTITUTION",\n  "carrier_change": true,\n  "constraints": {\n    "max_delay_days": 2,\n    "modes": ["SEA_FREIGHT", "AIR_FREIGHT"]\n  },\n  "supply_protection_tier": "PRIORITY",\n  "auto_commit_within_policy": true\n})\n\n// aATP BOP — reconfirm remaining 18 advisory orders with MaerskAP delay factored in\naATP.bop.triggerRun({\n  "filter":   { "carrier": "MAERSKAP", "exclude_ids": ["SO-81003","SO-81247","SO-81501","SO-81689","SO-81712"] },\n  "strategy": "EARLIEST_AVAILABLE",\n  "mode":     "IMMEDIATE"\n})',
       delay: 1300
     },
     {
       type: 'observation',
-      content: '{\n  "rerouted": [\n    {"order":"SO-81003","carrier":"COSCO_EXPRESS",  "delay":"+1d","cost_delta":"+$8.2K"},\n    {"order":"SO-81247","carrier":"COSCO_EXPRESS",  "delay":"+1d","cost_delta":"+$6.8K"},\n    {"order":"SO-81501","carrier":"EVERGREEN_LINE", "delay":"+2d","cost_delta":"+$5.1K"},\n    {"order":"SO-81689","carrier":"CARGOLUX_AIR",  "delay":"+0d","cost_delta":"+$22K"},\n    {"order":"SO-81712","carrier":"CARGOLUX_AIR",  "delay":"+0d","cost_delta":"+$18K"}\n  ],\n  "total_cost_premium":   "$60.1K",\n  "sla_penalty_avoided":  "$1.38M",\n  "all_within_policy":    true\n}',
+      content: '{\n  "abc_committed": [\n    {"order":"SO-81003","carrier":"COSCO_EXPRESS",  "method":"LOCATION_SUBSTITUTION","delay":"+1d","cost_delta":"+$8.2K"},\n    {"order":"SO-81247","carrier":"COSCO_EXPRESS",  "method":"LOCATION_SUBSTITUTION","delay":"+1d","cost_delta":"+$6.8K"},\n    {"order":"SO-81501","carrier":"EVERGREEN_LINE", "method":"LOCATION_SUBSTITUTION","delay":"+2d","cost_delta":"+$5.1K"},\n    {"order":"SO-81689","carrier":"CARGOLUX_AIR",  "method":"LOCATION_SUBSTITUTION","delay":"+0d","cost_delta":"+$22K"},\n    {"order":"SO-81712","carrier":"CARGOLUX_AIR",  "method":"LOCATION_SUBSTITUTION","delay":"+0d","cost_delta":"+$18K"}\n  ],\n  "bop_run": { "orders_reconfirmed": 18, "escalated": 0 },\n  "total_cost_premium":   "$60.1K",\n  "sla_penalty_avoided":  "$1.38M",\n  "all_within_policy":    true,\n  "policy_check":         "aATP Supply Protection tier validated for all 5"\n}',
       delay: 1100
     },
     {
@@ -945,6 +945,7 @@
 
   function triggerMention(tag) {
     const mentionMap = {
+      '@aATP_Agent':       'dock-s4',
       '@SAP_S4_Agent':     'dock-s4',
       '@Databricks':       'dock-dbx',
       '@Salesforce_Agent': 'dock-sf',

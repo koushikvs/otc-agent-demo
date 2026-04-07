@@ -438,6 +438,44 @@
       content: ''; flex: 1; height: 1px; background: var(--border);
     }
 
+    /* ═══════════════════════ AATP ENGINE STATUS ═══════════════════════ */
+    .aatp-engine { padding: 0 1.15rem 1.15rem; }
+    .aatp-engine-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;
+    }
+    .aatp-stat {
+      padding: 0.7rem 0.85rem; border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(10,110,209,0.04);
+      border-color: rgba(10,110,209,0.18);
+    }
+    .aatp-stat__label {
+      font-size: 0.64rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: #60a5fa; margin-bottom: 0.3rem; display: block;
+    }
+    .aatp-stat__value {
+      font-size: 1.15rem; font-weight: 900; letter-spacing: -0.02em;
+      color: var(--text); line-height: 1.1;
+    }
+    .aatp-stat__value small { font-size: 0.78rem; font-weight: 600; color: var(--text-2); }
+    .aatp-stat__delta { font-size: 0.67rem; font-weight: 600; color: var(--good); margin-top: 2px; display: block; }
+    .aatp-stat__delta--watch { color: var(--watch); }
+    .aatp-run-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.5rem 0; border-bottom: 1px solid var(--border);
+      font-size: 0.76rem;
+    }
+    .aatp-run-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .aatp-run-label { color: var(--text-2); }
+    .aatp-run-value { font-weight: 700; color: var(--text); }
+    .aatp-run-badge {
+      font-size: 0.6rem; font-weight: 800; padding: 2px 6px;
+      border-radius: 100px;
+    }
+    .aatp-run-badge--good  { background: rgba(16,185,129,0.14); color: #6ee7b7; }
+    .aatp-run-badge--watch { background: rgba(245,158,11,0.14); color: #fcd34d; }
+    .aatp-run-detail { padding: 0 1.15rem 1.15rem; }
+
     /* ═══════════════════════ FOOTER ═══════════════════════ */
     .page-footer {
       border-top: 1px solid var(--border);
@@ -576,9 +614,17 @@
     <div class="kpi-card">
       <div class="kpi-icon">🎯</div>
       <div class="kpi-data">
-        <span class="kpi-label">ATP Accuracy</span>
+        <span class="kpi-label">aATP PAC Accuracy</span>
         <span class="kpi-value">98.1<small>%</small></span>
         <span class="kpi-delta kpi-delta--good">↑ 0.4% vs last week</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🔀</div>
+      <div class="kpi-data">
+        <span class="kpi-label">aATP ABC Hit Rate</span>
+        <span class="kpi-value">87<small>%</small></span>
+        <span class="kpi-delta kpi-delta--good">Alt found without human</span>
       </div>
     </div>
     <div class="kpi-card">
@@ -662,7 +708,7 @@
         <div class="panel-head">
           <div>
             <h3>🤖 AI Insights</h3>
-            <p>Pattern analysis across 1,241 open orders · Databricks + S/4HANA</p>
+            <p>Pattern analysis across 1,241 open orders · Databricks + aATP + S/4HANA</p>
           </div>
           <span class="ai-badge">Claude 3.5</span>
         </div>
@@ -735,6 +781,24 @@
             </div>
           </div>
 
+          <div class="ai-insight ai-insight--watch" data-risk="atp">
+            <div class="ai-insight__icon">⚙️</div>
+            <div>
+              <strong>aATP Engine Health — ABC Hit Rate Declining in APAC Region</strong>
+              <div class="ai-insight__evidence">
+                aATP's Alternative-Based Confirmation (ABC) resolved <b>87% of disruptions</b> autonomously this week (14-day avg: 94%).
+                The decline is concentrated in APAC plant substitutions — Rotterdam and Singapore DCs are both under supply pressure simultaneously,
+                leaving fewer viable ABC alternatives. 3 orders this week required human escalation due to no ABC path found.
+              </div>
+              <div class="ai-insight__quote">"When aATP ABC cannot find an alternative, the agent escalates — it never guesses. These 3 orders need a human decision on alternative sourcing." — OTC Agent Log</div>
+              <div class="ai-insight__footer">
+                <span class="ai-insight__badge ai-insight__badge--watch">3 escalations</span>
+                <span class="ai-insight__source">aATP ABC Engine · SAP S/4HANA · Last 7 days</span>
+                <a class="ai-insight__link" href="#">Review Escalations →</a>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -796,12 +860,12 @@
         <div class="feed-list" id="feedList">
           <div class="feed-item" data-risk="supply">
             <div class="feed-item__header">
-              <strong>Agent Resolved — SO-82471 Apex Industries</strong>
+              <strong>aATP ABC Committed — SO-82471 Apex Industries</strong>
               <span class="feed-pill feed-pill--resolved">Resolved</span>
             </div>
-            <p>Rotterdam partial shipment triggered. Air freight PO-91847 raised for CTRL-4401. Net delay: 2 days vs 9.</p>
+            <p>aATP ABC confirmed Rotterdam substitution for ACT-7712 &amp; ACT-7713. Air freight PO-91847 raised for CTRL-4401 via location sub. BOP reprocessed 13 related orders. Net delay: 2 days vs 9.</p>
             <div class="feed-item__meta">
-              <span>OTC Agent</span><span>2 min ago</span><span>⬡ Autonomous</span>
+              <span>aATP Agent · S/4HANA</span><span>2 min ago</span><span>⬡ Autonomous</span>
             </div>
           </div>
           <div class="feed-item" data-risk="supply">
@@ -884,9 +948,9 @@
           <div class="order-card order-card--good" data-risk="atp">
             <span class="order-card__id">SO-82901</span>
             <span class="order-card__customer">TechBase Frankfurt</span>
-            <div class="order-card__desc">ATP confirmed across 3 DCs. All 8 SKUs allocated.</div>
+            <div class="order-card__desc">aATP PAC confirmed across 3 DCs. All 8 SKUs allocated. Supply Protection tier applied.</div>
             <div class="order-card__sys">
-              <span class="sys-tag s4">S/4</span>
+              <span class="sys-tag s4">aATP</span>
             </div>
             <span class="order-card__badge">✓ On Track</span>
             <span class="order-card__time">14 min ago</span>
@@ -923,6 +987,63 @@
             </div>
             <span class="order-card__badge">✓ On Track</span>
             <span class="order-card__time">45 min ago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AATP ENGINE STATUS -->
+      <div class="dash-panel" style="border-color: rgba(10,110,209,0.22);">
+        <div class="panel-head">
+          <div>
+            <h3>⚙️ aATP Engine Status</h3>
+            <p>Live health of the S/4HANA Advanced Available-to-Promise layer</p>
+          </div>
+          <span class="ai-badge" style="background:rgba(10,110,209,0.12);color:#60a5fa;border-color:rgba(10,110,209,0.25);">S/4HANA</span>
+        </div>
+        <div class="aatp-engine">
+          <div class="aatp-engine-grid">
+            <div class="aatp-stat">
+              <span class="aatp-stat__label">PAC Avg Response</span>
+              <span class="aatp-stat__value">124<small>ms</small></span>
+              <span class="aatp-stat__delta">↓ 8ms vs yesterday</span>
+            </div>
+            <div class="aatp-stat">
+              <span class="aatp-stat__label">ABC Hit Rate</span>
+              <span class="aatp-stat__value">87<small>%</small></span>
+              <span class="aatp-stat__delta aatp-stat__delta--watch">↓ 7% (APAC pressure)</span>
+            </div>
+            <div class="aatp-stat">
+              <span class="aatp-stat__label">BOP Last Run</span>
+              <span class="aatp-stat__value">02:30<small>AM</small></span>
+              <span class="aatp-stat__delta">1,241 orders assessed</span>
+            </div>
+            <div class="aatp-stat">
+              <span class="aatp-stat__label">Supply Protection</span>
+              <span class="aatp-stat__value">Active</span>
+              <span class="aatp-stat__delta">3 tiers configured</span>
+            </div>
+          </div>
+          <div style="margin-top:0.75rem;">
+            <div class="aatp-run-row">
+              <span class="aatp-run-label">Last BOP Run</span>
+              <span class="aatp-run-value">02:30 AM · 14 orders reconfirmed</span>
+              <span class="aatp-run-badge aatp-run-badge--good">Complete</span>
+            </div>
+            <div class="aatp-run-row">
+              <span class="aatp-run-label">ABC — Penang Disruption</span>
+              <span class="aatp-run-value">13 of 14 resolved autonomously</span>
+              <span class="aatp-run-badge aatp-run-badge--watch">1 Escalated</span>
+            </div>
+            <div class="aatp-run-row">
+              <span class="aatp-run-label">Product Allocation Check</span>
+              <span class="aatp-run-value">Tier-1 customers fully protected</span>
+              <span class="aatp-run-badge aatp-run-badge--good">OK</span>
+            </div>
+            <div class="aatp-run-row">
+              <span class="aatp-run-label">Next Scheduled BOP</span>
+              <span class="aatp-run-value">08:30 AM · 1,241 orders in scope</span>
+              <span class="aatp-run-badge aatp-run-badge--good">Scheduled</span>
+            </div>
           </div>
         </div>
       </div>

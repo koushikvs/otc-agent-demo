@@ -333,9 +333,27 @@
     .layer--lean-core  { background: rgba(99,102,241,0.12); color: #a5b4fc; }
     .layer--hybrid     { background: rgba(34,211,238,0.1);  color: #67e8f9; }
     .layer--agentic    { background: rgba(16,185,129,0.1);  color: #6ee7b7; }
+    .layer--aatp       { background: rgba(10,110,209,0.18); color: #60a5fa; }
     .layer--agent-core {
       background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(34,211,238,0.15));
       color: var(--accent-2);
+    }
+
+    .aatp-modules {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.85rem;
+    }
+    .aatp-module {
+      font-size: 0.64rem;
+      font-weight: 700;
+      padding: 0.18rem 0.52rem;
+      border-radius: 100px;
+      background: rgba(10,110,209,0.12);
+      color: #60a5fa;
+      border: 1px solid rgba(10,110,209,0.25);
+      letter-spacing: 0.03em;
     }
 
     .tech-card__role {
@@ -788,17 +806,25 @@
       <h2 class="story-heading reveal">Five systems. One seamless order experience.</h2>
       <p class="story-subheading reveal">
         Each platform plays a distinct role across the Lean Core, Hybrid Edge, and Agentic Edge.
-        Together, they form the intelligence fabric that the OTC Agent orchestrates in real time —
-        turning isolated signals into decisive action.
+        At the heart of S/4HANA sits <strong>SAP aATP</strong> — the fulfillment intelligence engine
+        that the OTC Agent invokes to confirm, substitute, and protect supply. Together, they form
+        the intelligence fabric that turns isolated signals into decisive action.
       </p>
 
       <div class="tech-grid">
 
         <div class="tech-card reveal" style="--reveal-delay:0ms">
           <span class="tech-card__icon">🏗️</span>
-          <h3 class="tech-card__title">SAP S/4HANA</h3>
+          <h3 class="tech-card__title">SAP S/4HANA + aATP</h3>
           <span class="tech-card__layer layer--lean-core">Lean Core</span>
-          <p class="tech-card__desc">Order management, ATP checks, fulfillment, and billing. The system of record for every delivery commitment made to a customer. Clean, minimal, trusted.</p>
+          <p class="tech-card__desc">The system of record for every delivery commitment. Embedded within it, <strong style="color:var(--text-primary)">Advanced Available-to-Promise (aATP)</strong> is the fulfillment intelligence engine — running availability checks, finding alternative supply paths, reprocessing backordered demand, and protecting priority customer allocations. The OTC Agent invokes aATP for all fulfilment logic; it never bypasses it.</p>
+          <div class="aatp-modules">
+            <span class="aatp-module">PAC · Availability Check</span>
+            <span class="aatp-module">ABC · Alternative Confirmation</span>
+            <span class="aatp-module">BOP · Backorder Processing</span>
+            <span class="aatp-module">Supply Protection</span>
+            <span class="aatp-module">Product Allocation</span>
+          </div>
         </div>
 
         <div class="tech-card reveal" style="--reveal-delay:100ms">
@@ -842,8 +868,9 @@
       <span class="story-eyebrow reveal">Connected Intelligence</span>
       <h2 class="story-heading reveal">The OTC Agent sits at the center.</h2>
       <p class="story-subheading reveal">
-        Correlating fulfillment signals from SAP S/4HANA, risk intelligence from Databricks,
-        and customer context from Salesforce to resolve delivery risk before it becomes a customer problem.
+        The OTC Agent orchestrates across the stack — but it doesn't replace SAP's fulfillment logic.
+        It invokes <strong>aATP</strong> for all availability and supply decisions, enriches those results
+        with risk intelligence from Databricks and relationship context from Salesforce, then acts.
         SAP BTP is the connective tissue that makes it all real-time.
       </p>
 
@@ -852,7 +879,7 @@
           <div class="flow-node">
             <span class="flow-node__icon">🏗️</span>
             <span class="flow-node__label">SAP S/4HANA</span>
-            <span class="flow-node__detail">Orders &amp; ATP</span>
+            <span class="flow-node__detail">aATP Engine</span>
           </div>
           <div class="flow-connector"><span>↓</span></div>
           <div class="flow-node">
@@ -917,13 +944,14 @@
           <div class="timeline-step__marker">1</div>
           <div class="timeline-step__content">
             <h3 class="timeline-step__title">The Order</h3>
-            <p class="timeline-step__system">Salesforce CRM &rarr; SAP S/4HANA</p>
+            <p class="timeline-step__system">Salesforce CRM &rarr; SAP S/4HANA &rarr; aATP PAC</p>
             <p class="timeline-step__body">
               Monday, 9:14 AM. Apex Industries &mdash; GlobalTech's largest account &mdash; places a
               <strong>$4.2M strategic order</strong> for precision actuators through the Salesforce customer portal.
-              S/4HANA runs an ATP check, confirms availability across three warehouses, creates a production order,
-              and commits a delivery date: <strong>18 days</strong>. The sales team logs the win.
-              Priya doesn't need to touch it. Everything looks green.
+              S/4HANA receives the order and immediately triggers <em>aATP's Product Availability Check (PAC)</em>,
+              which queries stock across three warehouses, evaluates concurrent order demand, and applies Apex's
+              Supply Protection tier. PAC returns a confirmed quantity and committed date: <strong>18 days</strong>.
+              A production order is created automatically. The sales team logs the win. Everything looks green.
             </p>
           </div>
         </div>
@@ -933,17 +961,18 @@
           <div class="timeline-step__marker">2</div>
           <div class="timeline-step__content">
             <h3 class="timeline-step__title">The Risk</h3>
-            <p class="timeline-step__system">Databricks ML &rarr; SAP BTP Event Stream</p>
+            <p class="timeline-step__system">Databricks ML &rarr; SAP BTP Event Stream &rarr; OTC Agent</p>
             <p class="timeline-step__body">
               Wednesday, 2:31 AM. Databricks detects an anomaly: a logistics disruption at GlobalTech's
               primary component supplier in Penang has created a <strong>9-day shortfall</strong> on three
-              critical SKUs in the Apex order. A re-check of current inventory in S/4HANA confirms it &mdash;
-              without intervention, Apex will miss their committed delivery date by <strong>9 days</strong>,
-              breaching their assembly-line start window. No human has been notified. The OTC Agent picks up the signal via BTP.
+              critical SKUs in the Apex order. This is an <em>external signal</em> — it exists in logistics
+              telemetry before it has propagated into SAP inventory records. aATP's scheduled Backorder
+              Processing run would eventually surface it, but not for hours. Databricks catches it first,
+              pushes the event to BTP, and the OTC Agent picks up the signal immediately.
             </p>
             <div class="agent-callout">
               <span class="agent-callout__icon">⚡</span>
-              <span>The signal reaches the OTC Agent <strong>72 hours before</strong> any warehouse team would have flagged the shortfall through standard daily reporting. The intervention window is still open.</span>
+              <span>The signal reaches the OTC Agent <strong>72 hours before</strong> it would appear in aATP's standard Backorder Processing run — because it hasn't yet touched SAP data. This is exactly the gap the agent fills.</span>
             </div>
           </div>
         </div>
@@ -953,32 +982,37 @@
           <div class="timeline-step__marker">3</div>
           <div class="timeline-step__content">
             <h3 class="timeline-step__title">The Decision</h3>
-            <p class="timeline-step__system">OTC Agent &mdash; Autonomous Reasoning</p>
+            <p class="timeline-step__system">OTC Agent &rarr; aATP ABC &amp; Supply Protection &rarr; Salesforce CRM</p>
             <p class="timeline-step__body">
-              The agent evaluates <strong>four resolution paths</strong> in parallel &mdash; weighing delivery impact,
-              cost premium, SLA exposure, and Apex's relationship score in Salesforce:
+              The agent doesn't reason about supply paths on its own — it calls <em>aATP's Alternative-Based
+              Confirmation (ABC)</em> to surface every viable fulfilment alternative across the global network.
+              aATP ABC evaluates plant substitution (Rotterdam DC: 850 units available), storage location
+              substitution, and product substitution rules — and returns a ranked set of confirmation proposals.
+              The agent then layers in what aATP cannot see: Apex's SLA penalty exposure ($2.1M), their
+              relationship score in Salesforce, and the cost premium of each path. It selects the option
+              that satisfies aATP's supply constraints <em>and</em> the business context:
             </p>
             <div class="agent-decision">
               <div class="agent-decision__header">Agent Evaluation &mdash; 4 Options &nbsp;·&nbsp; Completed in 41 seconds</div>
 
               <div class="agent-option">
                 <span class="agent-option__status status--selected">✓ Selected</span>
-                <span>Partial shipment from Rotterdam hub (8 of 12 SKUs on day 18) + expedited air freight for critical components. Net delay to full delivery: <strong>2 days</strong>. Cost premium: $42K. Apex SLA preserved on primary line items.</span>
+                <span><strong>aATP ABC result:</strong> Partial shipment from Rotterdam hub (8 of 12 SKUs on day 18) + expedited air freight for critical components. Net delay to full delivery: <strong>2 days</strong>. Cost premium: $42K. Within aATP's autonomous action policy limits. Apex SLA preserved on primary line items.</span>
               </div>
 
               <div class="agent-option">
                 <span class="agent-option__status status--rejected">Rejected</span>
-                <span>Full order delay — 9 days past committed date. Breaches Apex SLA. Estimated penalty + churn risk: $2.1M.</span>
+                <span>No intervention — full order delay of 9 days past committed date. aATP BOP would eventually reconfirm at the later date. Apex SLA breach: $2.1M penalty + churn risk. Rejected on business grounds.</span>
               </div>
 
               <div class="agent-option">
                 <span class="agent-option__status status--rejected">Rejected</span>
-                <span>Substitute SKU swap — alternative part not on Apex's approved spec sheet. Engineering sign-off required (5+ business days). Timeline incompatible.</span>
+                <span><strong>aATP ABC result:</strong> Product substitution with alternative SKU. Substitute not on Apex's approved spec sheet in Salesforce. Engineering sign-off required (5+ business days). Timeline incompatible — rejected.</span>
               </div>
 
               <div class="agent-option">
                 <span class="agent-option__status status--rejected">Rejected</span>
-                <span>Full expedited air freight for entire order. Resolves the delay completely but cost is $380K. Exceeds autonomous action policy threshold — would require CFO approval.</span>
+                <span>Full expedited air freight for entire order. Eliminates delay completely but cost is $380K. Exceeds aATP's Supply Protection autonomous action threshold for this order tier — CFO approval required. Rejected.</span>
               </div>
             </div>
           </div>
@@ -989,13 +1023,18 @@
           <div class="timeline-step__marker">4</div>
           <div class="timeline-step__content">
             <h3 class="timeline-step__title">The Action</h3>
-            <p class="timeline-step__system">SAP S/4HANA &nbsp;+&nbsp; Salesforce &nbsp;+&nbsp; ServiceNow</p>
+            <p class="timeline-step__system">aATP ABC + BOP &nbsp;·&nbsp; Salesforce &nbsp;·&nbsp; ServiceNow</p>
             <p class="timeline-step__body">
-              Wednesday, 2:33 AM. Two minutes after detecting the risk, the agent moves simultaneously
-              across three systems.<br><br>
+              Wednesday, 2:33 AM. Two minutes after detecting the risk, the agent executes simultaneously
+              across three systems — each action grounded in the decisions aATP already made.<br><br>
 
-              In <em>S/4HANA</em>, it updates the delivery schedule, triggers the Rotterdam partial shipment,
-              and creates an expedited freight purchase order within pre-approved supplier and price guardrails.<br><br>
+              In <em>aATP</em>, the agent commits the ABC alternative confirmation: it calls
+              <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">aATP.abc.commitAlternative()</code>
+              to update the delivery schedule with the Rotterdam partial shipment, then
+              <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">aATP.bop.triggerRun()</code>
+              to reprocess all other orders affected by the same Penang shortfall —
+              ensuring the full order book is reconfirmed, not just Apex's.
+              An expedited freight PO is raised within pre-approved supplier and price guardrails.<br><br>
 
               In <em>Salesforce</em>, it drafts and sends a proactive communication to Apex's VP of Procurement —
               <strong>6 days before the original delivery date</strong> — explaining the disruption clearly,
